@@ -1,0 +1,16 @@
+{
+  "ensemble_list": [
+    {
+      "title": "dummy1",
+      "function": someFunc,
+      "inputs": [],
+      "start_time": {
+          "hour": 12,
+          "minute": 0,
+          "second": 0
+      },
+      "iterations": 5,
+      "interval": 60
+    }
+  ]
+}
