@@ -3,8 +3,7 @@ Sleep period scheduler for Radio Telemetry's tower deployments
 
 ## Problem
 Given:
--	File ensembles.json containing functions to perform at scheduled times, specifications below
-  Read:
+-	File ensembles.json containing functions to perform at scheduled times, specifications below, read:
   -	Set S of functions to perform now
   -	Time tn+1 at which we need to perform next set of communications from ensembles.json
 
@@ -25,6 +24,7 @@ Remember to save variable indicating next set of communications to disk, since l
 Functions to perform should be stored in the following json format:
 ```
 {
+  "next_ensemble": "example1",
   "ensemble_list": [
     {
       "title": "example1",
@@ -34,6 +34,11 @@ Functions to perform should be stored in the following json format:
           "hour": 12,
           "minute": 0,
           "second": 0
+      },
+      "next_time": {
+        "hour": 12,
+        "minute": 0,
+        "second": 0
       },
       "iterations": 5,
       "interval": 60
@@ -47,6 +52,11 @@ Functions to perform should be stored in the following json format:
           "minute": 0,
           "second": 0
       },
+      "next_time": {
+        "hour": 12,
+        "minute": 0,
+        "second": 0
+      },
       "iterations": 5,
       "interval": 60
     }
@@ -55,13 +65,18 @@ Functions to perform should be stored in the following json format:
 }
 ```
 With each item being of the correct type:
+- next_ensemble: string matching some ensemble's title (defaults to first in sequence if missing or invalid)
 - function: Callable
 - inputs: void*, to be converted? Or a list of args & we trust user to match correct number and types of args to each function?
-- starting time/next execution time (can update?):
+- starting time:
   - hour: hour at which to start [0, 23]
   - minute: minute at which to start [0, 59]
   - second: second at which to start [0, 59]
   0 is assumed for each of these if not specified
+- next execution time:
+  - hour: hour at which to next execute [0, 23] (default 23)
+  - minute: minute at which to next execute [0, 59] (default 59)
+  - second: second at which to next execute [0, 59] (default 59)
 - iterations: int
 - interval (seconds between iterations): double
 An example file, dummy_ensembles.json, is provided for testing purposes.
