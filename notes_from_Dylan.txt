@@ -1,0 +1,14 @@
+I commented out most of the stuff we had in order to focus on the small
+piece I was working on. I included a beginning "active_ensembles.json"
+file that only says the next_ensemble is -1. Once you compile the
+exscheduler.cpp file and run it, the active list will be built in that
+file and next_ensemble will be overwritten to 0. Right now it only copies
+the function names, ensemble titles, and times but it should be easily
+extensible to include function arguments (if we can ever get the
+Callable studd to work). 
+
+I included a pdf of the control flow but mine is a little uglier than
+yours but I think it will make sense.
+
+Also I expanded the dummy ensembles to include more for testing things out,
+and this version ignores the "next_time" parts because it doesn't need them.

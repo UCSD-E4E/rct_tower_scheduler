@@ -1,9 +1,60 @@
 {
-  "next_ensemble": "dummy2",
+  "next_ensemble": "setup",
   "ensemble_list": [
     {
+      "title": "zeta1",
+      "function": "someFunc",
+      "inputs": [],
+      "start_time": {
+          "hour": 8,
+          "minute": 0,
+          "second": 15
+      },
+      "next_time": {
+        "hour": 8,
+        "minute": 0,
+        "second": 15
+      },
+      "iterations": 5,
+      "interval": 60
+    },
+    {
+      "title": "zeta2",
+      "function": "someFunc",
+      "inputs": [],
+      "start_time": {
+          "hour": 8,
+          "minute": 0,
+          "second": 30
+      },
+      "next_time": {
+        "hour": 8,
+        "minute": 0,
+        "second": 30
+      },
+      "iterations": 5,
+      "interval": 60
+    },
+    {
       "title": "dummy1",
-      "function": someFunc,
+      "function": "someFunc",
+      "inputs": [],
+      "start_time": {
+          "hour": 12,
+          "minute": 0,
+          "second": 0
+      },
+      "next_time": {
+        "hour": 12,
+        "minute": 3,
+        "second": 0
+      },
+      "iterations": 5,
+      "interval": 60
+    },
+    {
+      "title": "alpha1",
+      "function": "someFunc",
       "inputs": [],
       "start_time": {
           "hour": 12,
@@ -20,7 +71,7 @@
     },
     {
       "title": "dummy2",
-      "function": someFunc,
+      "function": "someFunc",
       "inputs": [],
       "start_time": {
           "hour": 10,
