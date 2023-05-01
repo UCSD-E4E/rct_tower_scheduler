@@ -30,3 +30,7 @@
 *.exe
 *.out
 *.app
+
+# jsoncpp amalgamate for Windows
+json/*
+jsoncpp.cpp

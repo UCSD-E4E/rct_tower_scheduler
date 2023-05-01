@@ -1,6 +1,29 @@
 # rct_tower_scheduler
 Sleep period scheduler for Radio Telemetry's tower deployments
 
+## Setup
+# Linux:
+Install jsoncpp using:
+`sudo apt-get install libjsoncpp-dev`
+Compile using:
+`g++ -ljsoncpp -o testscheduler exscheduler.cpp`
+# Windows:
+Install jsoncpp amalgamate using:
+```
+git clone git@github.com:open-source-parsers/jsoncpp.git
+cd jsoncpp
+python amalgamate.py
+```
+Move jsoncpp.cpp and the json directory from `dist` subdirectory into `rct_tower_scheduler` directory
+Compile using:
+```
+g++ -c jsoncpp.cpp -o jsoncpp.o
+ar cr lib_jsoncpp.a jsoncpp.o
+g++ -c exscheduler.cpp -o testscheduler.o
+g++ testscheduler.o lib_jsoncpp.a -o testscheduler -static-libstdc++
+```
+# Mac:
+
 ## Problem
 Given:
 -	File ensembles.json containing functions to perform at scheduled times, specifications below, read:
