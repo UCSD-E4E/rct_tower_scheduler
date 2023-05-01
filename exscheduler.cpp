@@ -122,7 +122,7 @@ int main(int argc, char* argv[]) {
 		std::cout << "next ensemble is setup!!\n";
 		setup(ensembles);
 		next_ensemble++;
-		/* TODO:
+		/* TODO: Matthew
 		 * call to function that checks if next_ensemble is already
 		 * past current time and if so, runs the ensemble, iterates
 		 * next_ensemble and checks again */
@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "now in seconds: " << curr_time_seconds << std::endl;
 	std::cout << "next ensemble time in seconds: " << nearest_ens_time << std::endl;
 
-	/* TODO:
+	/* TODO: Wesley
 	 * the following lines (stuff with Callables) doesn't seem to work
 	 * so I commented it out for the sake of compiling and testing
 	 * the other work going on */
@@ -172,6 +172,13 @@ int main(int argc, char* argv[]) {
 //	}
 //
 
+/* TODO: Matthew
+ * translate the below to a function that checks if next_ensemble is already
+ * past current time
+ * 		if so, runs the ensemble, iterates next_ensemble and checks again
+ * 		if not, if there's time to sleep, print very last statement about sleepTimer.sleep
+ * 						if not enough time to sleep, spin
+ */
 	int sleep_time = nearest_ens_time - curr_time_seconds -
 		TIME_WAKEUP - TIME_SHUTDOWN;
 	if (sleep_time <= 0) {
