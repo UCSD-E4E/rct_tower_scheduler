@@ -1,10 +1,15 @@
 #include <chrono>
 #include <ctime>
 #include <fstream>
+#include <functional>
 #include <iostream>
 #include <string>
-#include <functional>
+
+// TODO: requires quotes for Windows, should add Windows v Linux as config opt
 #include <json/json.h>
+
+#define TIME_SHUTDOWN 5; // find real shutdon and wakeup times later
+#define TIME_WAKEUP 5;
 
 
 /***************************************************/
@@ -95,9 +100,6 @@ int someFunc() {
 
 
 int main(int argc, char* argv[]) {
-	const double TIME_SHUTDOWN = 0.5; // find real shutdon and wakeup times later
-	const double TIME_WAKEUP = 0.5;
-
 	std::string filename = "active_ensembles.json";
 	if (argc > 1) {
 		filename = argv[1];
@@ -105,29 +107,34 @@ int main(int argc, char* argv[]) {
 
 	// set up istream and read active ensemble function data
 	Json::Value ensembles;
+	int next_ensemble;
 	std::ifstream ensemble_ifile(filename, std::ifstream::binary);
-	ensemble_ifile >> ensembles;
-
-	// temporary, for testing while we work
-	//std::cout << ensembles << "\n";
-	//std::cout << ensembles["ensemble_list"][0] << "\n";
+	try {
+		ensemble_ifile >> ensembles;
+		next_ensemble = ensembles["next_ensemble"].asInt();
+	}
+	catch(...) { // robust to deletion of active_ensembles
+		next_ensemble = -1;
+	}
 
 	// fetch current ensemble
-	int next_ensemble = ensembles["next_ensemble"].asInt();
 	if (next_ensemble == -1) { /* should run setup */
 		std::cout << "next ensemble is setup!!\n";
 		setup(ensembles);
 		next_ensemble++;
-		/* call to function that checks if next_ensemble is already
+		/* TODO: Matthew
+		 * call to function that checks if next_ensemble is already
 		 * past current time and if so, runs the ensemble, iterates
 		 * next_ensemble and checks again */
 
-		/* once all missed ensembles are caught up, call to function
+		/* TODO:
+		 * once all missed ensembles are caught up, call to function
 		 * that checks if next_ensemble is far enough away to make
 		 * sleep worthwhile */
 	} else { /* next ensemble is a real one */
 		std::cout << "next ensemble is something other than setup!!\n";
-		/* get function needed to be called by indexing ensemble_list
+		/* TODO:
+		 * get function needed to be called by indexing ensemble_list
 		 * with next_ensemble, run it, then iterate next_ensemble and
 		 * do the same checks as above
 		 * NOTE: maybe checks should just be right after this if-else
@@ -143,12 +150,11 @@ int main(int argc, char* argv[]) {
 	std::cout << "now in seconds: " << curr_time_seconds << std::endl;
 	std::cout << "next ensemble time in seconds: " << nearest_ens_time << std::endl;
 
-	return 0;
-
-	/* the following lines (stuff with Callables) doesn't seem to work
+	/* TODO: Wesley
+	 * the following lines (stuff with Callables) doesn't seem to work
 	 * so I commented it out for the sake of compiling and testing
 	 * the other work going on */
-		
+
 	//std::vector<Callable> ensemble;
 	//else {
 	//	for (auto e : ensembles["ensemble_list"]) {
@@ -165,52 +171,33 @@ int main(int argc, char* argv[]) {
 //		// should just be comma-separated list of inputs
 //	}
 //
-//	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//
-//	/* Hannah
-//	   TODO: update each individual ensemble's next execution time IF IT WAS CALLED
-//	   if (next_ensemble == "" might need to change this but the first ensemble executing) {
-//	   add interval secs to value of start_time
-//	   }
-//	   else if (determine if intervals remain) {
-//	   add interval secs to current value of next_time
-//	   }
-//	   else {
-//	   set next_time to default (23:59:59 or just blank really)
-//	   }
-//	*/
-//
-//	// save next ensemble to disk
-//	/*
-//	  TODO: replace next_ensemble with title of next-occurring ensemble
-//	  (i.e., lowest hr/min/sec in next_time)
-//	  Might want to make a function with "next_time"/"start_time" argument options
-//	  to find lowest next/start time among all ensembles, since this is really the
-//	  same as the line 34 TODO
-//	*/
-//	ensembles["next_ensemble"] = "dummy2"; // replace dummy2 obviously
-//
-//	Json::StyledWriter styledWriter;
-//	Json::FastWriter fastWriter;
-//	std::ofstream ensemble_ofile(filename, std::ifstream::binary);
-//	ofstream << styledWriter.write(ensembles) << std::endl;
-//	ofstream << fastWriter.write(ensembles) << std::endl;
-//
-//	/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-//
-//	// calculations
-//	auto curr_time = std::chrono::system_clock::now();
-//	auto next_time = std::chrono::system_clock::now(); // TODO: change this to clocktime of next ensemble
-//	std::chrono::duration<double> sleep_time = next_time - curr_time - TIME_SHUTDOWN - TIME_WAKEUP;
-//	if (sleep_time <= 0) {
-//		// not enough time to go into sleep and wake up again before next ensemble
-//		sleep(sleep_time); // C++ sleep function, not sleep timer
-//	}
-//	std::time_t end_time = std::chrono::system_clock::to_time_t(next_time); // idk what this is
-//	std::cout << "sleep time: " << sleep_time.count() << "s" << std::endl;
-//
-//	// send sleep command to sleep timer
-//	// someRefToSleepTimer.sleep(sleep_time);
-//	std::cout << "temporary print replacing sleep: sleepTimer.sleep(" <<
-//		sleep_time << ");" << std::endl;
+
+/* TODO: Matthew
+ * translate the below to a function that checks if next_ensemble is already
+ * past current time
+ * 		if so, runs the ensemble, iterates next_ensemble and checks again
+ * 		if not, if there's time to sleep, print very last statement about sleepTimer.sleep
+ * 						if not enough time to sleep, spin
+ */
+	int sleep_time = nearest_ens_time - curr_time_seconds -
+		TIME_WAKEUP - TIME_SHUTDOWN;
+	if (sleep_time <= 0) {
+		sleep_time = nearest_ens_time - curr_time_seconds;
+		// not enough time to go into sleep and wake up again before next ensemble
+		// sleep(sleep_time); // C++ sleep function, not sleep timer
+		std::cout << "temporary print replacing sleep: sleep(" <<
+			sleep_time << ");" << std::endl;
+			/* TODO:
+			 * instead of returning, we should restart at the top of main
+			 * more precisely, we ought to have main just call some starting point
+			 * function which can also be called here
+			 */
+			return 0;
+	}
+
+	// send sleep command to sleep timer
+	// someRefToSleepTimer.sleep(sleep_time);
+	std::cout << "temporary print replacing sleep: sleepTimer.sleep(" <<
+		sleep_time << ");" << std::endl;
+	return 0;
 }

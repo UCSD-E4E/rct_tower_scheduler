@@ -1,5 +1,4 @@
 {
-  "next_ensemble": "setup",
   "ensemble_list": [
     {
       "title": "zeta1",
@@ -9,11 +8,6 @@
           "hour": 8,
           "minute": 0,
           "second": 15
-      },
-      "next_time": {
-        "hour": 8,
-        "minute": 0,
-        "second": 15
       },
       "iterations": 5,
       "interval": 60
@@ -27,11 +21,6 @@
           "minute": 0,
           "second": 30
       },
-      "next_time": {
-        "hour": 8,
-        "minute": 0,
-        "second": 30
-      },
       "iterations": 5,
       "interval": 60
     },
@@ -43,11 +32,6 @@
           "hour": 12,
           "minute": 0,
           "second": 0
-      },
-      "next_time": {
-        "hour": 12,
-        "minute": 3,
-        "second": 0
       },
       "iterations": 5,
       "interval": 60
@@ -61,11 +45,6 @@
           "minute": 0,
           "second": 0
       },
-      "next_time": {
-        "hour": 12,
-        "minute": 3,
-        "second": 0
-      },
       "iterations": 5,
       "interval": 60
     },
@@ -74,14 +53,9 @@
       "function": "someFunc",
       "inputs": [],
       "start_time": {
-          "hour": 10,
+          "hour": 10,S
           "minute": 30,
           "second": 0
-      },
-      "next_time": {
-        "hour": 14,
-        "minute": 5,
-        "second": 0
       },
       "iterations": 5,
       "interval": 3600

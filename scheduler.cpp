@@ -10,8 +10,8 @@ int someFunc() {
 }
 
 int main(int argc, char* argv[]) {
-  const double TIME_SHUTDOWN = 0.5; // find real shutdon and wakeup times later
-  const double TIME_WAKEUP = 0.5;
+  const double TIME_SHUTDOWN = 5; // find real shutdon and wakeup times later
+  const double TIME_WAKEUP = 5;
 
   str filename = "ensembles.json";
   if (argc > 1) {
@@ -56,9 +56,9 @@ int main(int argc, char* argv[]) {
 
   /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-  /* Hannah
-  TODO: update each individual ensemble's next execution time IF IT WAS CALLED
-  if (next_ensemble == "" might need to change this but the first ensemble executing) {
+  // Hannah
+  // TODO: update each individual ensemble's next execution time IF IT WAS CALLED
+  if (next_ensemble == "" ) { // might need to change this but the first ensemble executing
     add interval secs to value of start_time
   }
   else if (determine if intervals remain) {
@@ -67,7 +67,6 @@ int main(int argc, char* argv[]) {
   else {
     set next_time to default (23:59:59 or just blank really)
   }
-  */
 
   // save next ensemble to disk
   /*
