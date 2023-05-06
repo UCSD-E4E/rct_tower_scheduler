@@ -53,7 +53,7 @@
       "function": "someFunc",
       "inputs": [],
       "start_time": {
-          "hour": 10,S
+          "hour": 10,
           "minute": 30,
           "second": 0
       },
