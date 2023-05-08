@@ -10,6 +10,42 @@ TIME_WAKEUP = 5
  * one is for the active list and one is for the original ensembles file
 '''
 
+def teardown():
+    '''
+    Find how long until the first ensemble of the next day
+    Uses slightly different logic than the normal next time
+    calculation since we're going to the next day
+    '''
+
+    seconds_in_day = 86400
+
+    filename = "active_ensembles.json"
+    with open(filename, "r", encoding="utf-8") as f_in:
+        ens = json.load(f_in)
+
+    f_in.close()
+    first_ensemble_start = ens["ensemble_list"][0]["start_time"]
+
+
+    ens["next_ensemble"] = 0 # back to first ensemble
+    with open(filename, "w", encoding="utf-8") as f_out:
+        json.dump(ens, f_out, indent=4)
+
+    f_out.close()
+
+
+    now = time.localtime()
+    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+
+    print("time now: " + str(curr_time_seconds))
+    print("target time: " + str(first_ensemble_start))
+
+    time_left_today = seconds_in_day - curr_time_seconds
+    time_to_sleep = time_left_today + first_ensemble_start
+    print("calling sleep timer for " + str(time_to_sleep) + " seconds")
+    # call sleep timer here
+
+
 def hmsToSeconds(hour: int, min: int, sec: int):
     '''
     Convert hours, minutes, and seconds to just seconds
