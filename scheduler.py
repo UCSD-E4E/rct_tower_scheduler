@@ -116,6 +116,31 @@ def someFunc():
     '''
     print("someFunc called!")
 
+def check_ensemble_should_sleep(nearest_ens_time):
+    # Get current time       
+    now = time.localtime()
+    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+    print("now in seconds: " + str(curr_time_seconds))
+    print("next ensemble time in seconds: " + str(nearest_ens_time))
+
+    # Next ensemble time past current time
+    # TODO: edge case where time equals?
+    if (nearest_ens_time >= curr_time_seconds):
+        # Do not need to sleep
+        return (False, 0)
+    else: 
+        available_sleep_time = nearest_ens_time - curr_time_seconds - TIME_WAKEUP - TIME_SHUTDOWN
+        # not enough time to go into sleep and wake up again before next ensemble
+        if available_sleep_time <= 0:
+            sleep_time = nearest_ens_time - curr_time_seconds
+            # time.sleep(sleep_time) # Wait using Python sleep function
+            print(f"Temporary print replace sleep: time.sleep({str(sleep_time)})")
+            # Do not need to sleep any longer
+            return (False, 0)
+        else:
+            # Need to send sleep command to sleep timer
+            return (True, available_sleep_time)
+
 
 def main():
     filename = "active_ensembles.json"
@@ -127,6 +152,8 @@ def main():
         next_ensemble = ensembles["next_ensemble"]
     except:
         next_ensemble = -1
+
+    ens = ensembles["ensemble_list"] # shortcut for active
 
 	# fetch current ensemble
     if next_ensemble == -1:  # should run setup
@@ -141,10 +168,27 @@ def main():
         json.dump(full_json, ensemble_ofile)
         ensemble_ofile.close()
 
-        ''' TODO: Matthew
-		 * call to function that checks if next_ensemble is already
-		 * past current time and if so, runs the ensemble, iterates
-		 * next_ensemble and checks again '''
+        '''
+        Checks if next_ensemble is already past current time
+ 	    If so, runs the ensemble, iterates next_ensemble and checks again
+ 	    If not, 
+            If there's time to sleep, print very last statement about sleepTimer.sleep
+			If not enough time to sleep, time.sleep(sec)
+        '''
+        while (True):
+            next_ensemble = ensembles["next_ensemble"]
+            if (next_ensemble >= len(ens)):
+                break
+
+            nearest_ens_time = ens[next_ensemble]["time"]
+            should_sleep, sleep_time = check_ensemble_should_sleep(nearest_ens_time)
+
+            if (should_sleep):
+                # someRefToSleepTimer.sleep(sleep_time)
+                print(f"Temporary print replacing sleep: sleepTimer.sleep({str(sleep_time)})")
+            else:
+                # Run the ensemble
+                ensembles["next_ensemble"] += 1
 
         ''' TODO:
 		 * once all missed ensembles are caught up, call to function
@@ -159,15 +203,6 @@ def main():
 		 * NOTE: maybe checks should just be right after this if-else
 		 * since both branches need to do the same checks '''
 
-
-    ens = ensembles["ensemble_list"] # shortcut for active
-    nearest_ens_time = ens[next_ensemble]["time"]
-
-    now = time.localtime()
-    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
-    print("now in seconds: " + str(curr_time_seconds))
-    print("next ensemble time in seconds: " + str(nearest_ens_time))
-
     '''
     TODO: Wesley
 
@@ -180,28 +215,6 @@ def main():
 		# should just be comma-separated list of inputs
     next_ensemble += 1
     '''
-
-    '''
-     TODO: Matthew
-     translate the below to a function that checks if next_ensemble is already
-     past current time
- 	 if so, runs the ensemble, iterates next_ensemble and checks again
- 	 if not, if there's time to sleep, print very last statement about sleepTimer.sleep
-					if not enough time to sleep, time.sleep(sec)
-    '''
-    sleep_time = nearest_ens_time - curr_time_seconds - \
-		TIME_WAKEUP - TIME_SHUTDOWN
-    if sleep_time <= 0:
-        sleep_time = nearest_ens_time - curr_time_seconds
-		# not enough time to go into sleep and wake up again before next ensemble
-		# time.sleep(sleep_time) # Python sleep function, not sleep timer
-        print("temporary print replacing sleep: time.sleep(" + str(sleep_time) + ")")
-        #main()
-        exit()
-
-	# send sleep command to sleep timer
-	# someRefToSleepTimer.sleep(sleep_time)
-    print("temporary print replacing sleep: sleepTimer.sleep(" + str(sleep_time) + ")")
 
 if __name__ == '__main__':
     main()
