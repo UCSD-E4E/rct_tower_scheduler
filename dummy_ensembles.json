@@ -2,7 +2,10 @@
   "ensemble_list": [
     {
       "title": "zeta1",
-      "function": "someFunc",
+      "module_name": "tester_functions",
+      "module_directory": "ensemble_tests/tester_functions.py",
+      "class": "SimpleFunctions",
+      "function": "hello_world",
       "inputs": [],
       "start_time": {
           "hour": 8,
@@ -14,8 +17,11 @@
     },
     {
       "title": "zeta2",
-      "function": "someFunc",
-      "inputs": [],
+      "module_name": "tester_functions",
+      "module_directory": "ensemble_tests/tester_functions.py",
+      "class": "SimpleFunctions",
+      "function": "print_this",
+      "inputs": ["Hello World!"],
       "start_time": {
           "hour": 8,
           "minute": 0,
@@ -26,8 +32,11 @@
     },
     {
       "title": "dummy1",
-      "function": "someFunc",
-      "inputs": [],
+      "module_name": "tester_functions",
+      "module_directory": "ensemble_tests/tester_functions.py",
+      "class": "SimpleFunctions",
+      "function": "add_this",
+      "inputs": [1, 2],
       "start_time": {
           "hour": 12,
           "minute": 0,
@@ -38,8 +47,11 @@
     },
     {
       "title": "alpha1",
-      "function": "someFunc",
-      "inputs": [],
+      "module_name": "tester_functions",
+      "module_directory": "ensemble_tests/tester_functions.py",
+      "class": "SimpleFunctions",
+      "function": "subtract_this",
+      "inputs": [1, 2],
       "start_time": {
           "hour": 12,
           "minute": 0,
@@ -50,7 +62,10 @@
     },
     {
       "title": "dummy2",
-      "function": "someFunc",
+      "module_name": "tester_functions",
+      "module_directory": "ensemble_tests/tester_functions.py",
+      "class": "",
+      "function": "no_class",
       "inputs": [],
       "start_time": {
           "hour": 10,
