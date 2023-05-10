@@ -3,13 +3,45 @@ import json
 import time
 import importlib.util
 
+
 TIME_SHUTDOWN = 5 # find real shutdon and wakeup times later
 TIME_WAKEUP = 5
 
-'''' TODO: possibly clarify these names in the code
- * variable name "ens" used as a shortcut in two different locations
- * one is for the active list and one is for the original ensembles file
-'''
+def teardown():
+    '''
+    Find how long until the first ensemble of the next day
+    Uses slightly different logic than the normal next time
+    calculation since we're going to the next day
+    '''
+
+    seconds_in_day = 86400
+
+    filename = "active_ensembles.json"
+    with open(filename, "r", encoding="utf-8") as f_in:
+        ens = json.load(f_in)
+
+    f_in.close()
+    first_ensemble_start = ens["ensemble_list"][0]["start_time"]
+
+
+    ens["next_ensemble"] = 0 # back to first ensemble
+    with open(filename, "w", encoding="utf-8") as f_out:
+        json.dump(ens, f_out, indent=4)
+
+    f_out.close()
+
+
+    now = time.localtime()
+    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+
+    print("time now: " + str(curr_time_seconds))
+    print("target time: " + str(first_ensemble_start))
+
+    time_left_today = seconds_in_day - curr_time_seconds
+    time_to_sleep = time_left_today + first_ensemble_start
+    print("calling sleep timer for " + str(time_to_sleep) + " seconds")
+    # call sleep timer here
+
 
 def hmsToSeconds(hour: int, min: int, sec: int):
     '''
@@ -75,6 +107,12 @@ def setup(filename: str = "dummy_ensembles.json"):
     ensemble_ofile.close()
 
 
+def someFunc():
+    ''''
+    simple printing function for use in testing
+    '''
+    print("someFunc called!")
+
 def perform_ensemble_functions(filename: str = "dummy_ensembles.json"):
     '''
     Function to call all dummy_ensembles.json functions for the day
@@ -110,11 +148,45 @@ def perform_ensemble_functions(filename: str = "dummy_ensembles.json"):
             # Run function
             class_function(*function_inputs)
 
-def someFunc():
-    ''''
-    simple printing function for use in testing
+def check_ensemble_should_sleep(nearest_ens_time: int):
     '''
-    print("someFunc called!")
+    Given the time of execution of an ensemble, determine whether we have enough
+    time for the tower to go into sleep before it will need to wake up again.
+
+    @param nearest_ens_time: time (in seconds) of next ensemble's execution
+    @return should_sleep: True if tower has enough time to go into sleep and
+                wake up again before next ensemble, else false
+            available_sleep_time: seconds for which tower may sleep
+    '''
+    # Get current time
+    now = time.localtime()
+    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+    print("now in seconds: " + str(curr_time_seconds))
+    print("next ensemble time in seconds: " + str(nearest_ens_time))
+
+    # Next ensemble time past current time
+    if (nearest_ens_time >= curr_time_seconds):
+        # Do not need to sleep
+        return (False, 0)
+    else:
+        available_sleep_time = nearest_ens_time - curr_time_seconds - \
+            TIME_WAKEUP - TIME_SHUTDOWN
+
+        '''
+        TODO: check if sleep timer is responsive
+        if not, do time.sleep instead of calling sleep timer
+        '''
+
+        # not enough time to go into sleep and wake up again before next ensemble
+        if available_sleep_time <= 0:
+            sleep_time = nearest_ens_time - curr_time_seconds
+            # time.sleep(sleep_time) # Wait using Python sleep function
+            print(f"Temporary print replace sleep: time.sleep({str(sleep_time)})")
+            # Do not need to sleep any longer
+            return (False, 0)
+        else:
+            # Need to send sleep command to sleep timer
+            return (True, available_sleep_time)
 
 
 def main():
@@ -125,75 +197,45 @@ def main():
         ensembles = json.load(f)
         f.close()
         next_ensemble = ensembles["next_ensemble"]
+        ens = ensembles["ensemble_list"]
     except:
-        next_ensemble = -1
-
-	# fetch current ensemble
-    if next_ensemble == -1:  # should run setup
-        print("next ensemble is setup!!")
+        next_ensemble = 0
         setup()
-        f = open(filename)
-        ensembles = json.load(f)
-        f.close()
 
-        ensembles["next_ensemble"] += 1
-        ensemble_ofile = open(filename, "w")
-        #json.dump(full_json, ensemble_ofile)
-        ensemble_ofile.close()
-
-        ''' TODO: Matthew
-		 * call to function that checks if next_ensemble is already
-		 * past current time and if so, runs the ensemble, iterates
-		 * next_ensemble and checks again '''
-
-        ''' TODO:
-		 * once all missed ensembles are caught up, call to function
-		 * that checks if next_ensemble is far enough away to make
-		 * sleep worthwhile '''
-    else:  # next ensemble is a real one
-        print("next ensemble is something other than setup!!")
-        ''' TODO:
-		 * get function needed to be called by indexing ensemble_list
-		 * with next_ensemble, run it, then iterate next_ensemble and
-		 * do the same checks as above
-		 * NOTE: maybe checks should just be right after this if-else
-		 * since both branches need to do the same checks '''
-
+    f = open(filename)
+    ensembles = json.load(f)
+    f.close()
 
     ens = ensembles["ensemble_list"] # shortcut for active
-    nearest_ens_time = ens[next_ensemble]["time"]
-
-    now = time.localtime()
-    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
-    print("now in seconds: " + str(curr_time_seconds))
-    print("next ensemble time in seconds: " + str(nearest_ens_time))
-
-    print("performing ensemble functions: ")
-    perform_ensemble_functions()
-    next_ensemble += 1
-    
 
     '''
-     TODO: Matthew
-     translate the below to a function that checks if next_ensemble is already
-     past current time
- 	 if so, runs the ensemble, iterates next_ensemble and checks again
- 	 if not, if there's time to sleep, print very last statement about sleepTimer.sleep
-					if not enough time to sleep, time.sleep(sec)
+    Checks if next_ensemble is already past current time
+     If so, runs the ensemble, iterates next_ensemble and checks again
+     If not,
+    If there's time to sleep, print very last statement about sleepTimer.sleepIf not enough time to sleep, time.sleep(sec)
     '''
-    sleep_time = nearest_ens_time - curr_time_seconds - \
-		TIME_WAKEUP - TIME_SHUTDOWN
-    if sleep_time <= 0:
-        sleep_time = nearest_ens_time - curr_time_seconds
-		# not enough time to go into sleep and wake up again before next ensemble
-		# time.sleep(sleep_time) # Python sleep function, not sleep timer
-        print("temporary print replacing sleep: time.sleep(" + str(sleep_time) + ")")
-        #main()
-        exit()
+    while (True):
+        next_ensemble = ensembles["next_ensemble"]
+        if (next_ensemble >= len(ens)):
+            break
 
-	# send sleep command to sleep timer
-	# someRefToSleepTimer.sleep(sleep_time)
-    print("temporary print replacing sleep: sleepTimer.sleep(" + str(sleep_time) + ")")
+        nearest_ens_time = ens[next_ensemble]["time"]
+        should_sleep, sleep_time = check_ensemble_should_sleep(nearest_ens_time)
+
+        if (should_sleep):
+            # someRefToSleepTimer.sleep(sleep_time)
+            print(f"Temporary print replacing sleep: sleepTimer.sleep({str(sleep_time)})")
+        else:
+            print("performing ensemble functions: ")
+            perform_ensemble_functions()
+            next_ensemble += 1
+
+            ensembles["next_ensemble"] += 1
+
+            #ensemble_ofile = open(filename, "w")
+            #json.dump(full_json, ensemble_ofile)
+            #ensemble_ofile.close()
+
 
 if __name__ == '__main__':
     main()
