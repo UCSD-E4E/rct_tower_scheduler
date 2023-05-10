@@ -1,33 +1,6 @@
 # rct_tower_scheduler
 Sleep period scheduler for Radio Telemetry's tower deployments
 
-## Setup
-### Linux:
-Install jsoncpp using:
-`sudo apt-get install libjsoncpp-dev`
-
-Compile using:
-`g++ -ljsoncpp -o testscheduler exscheduler.cpp`
-### Windows:
-Install jsoncpp amalgamate using:
-```
-git clone git@github.com:open-source-parsers/jsoncpp.git
-cd jsoncpp
-python amalgamate.py
-```
-Move jsoncpp.cpp and the json directory from `dist` subdirectory into `rct_tower_scheduler` directory
-Compile jsoncpp library (only needs to be done once) using:
-```
-g++ -c jsoncpp.cpp -o jsoncpp.o
-ar cr lib_jsoncpp.a jsoncpp.o
-```
-Compile scheduler using:
-```
-g++ -c exscheduler.cpp -o testscheduler.o
-g++ testscheduler.o lib_jsoncpp.a -o testscheduler -static-libstdc++
-```
-### Mac:
-
 ## Problem
 Given:
 -	File ensembles.json containing functions to perform at scheduled times, specifications below, read:
@@ -102,9 +75,6 @@ An example file, dummy_ensembles.json, is provided for testing purposes.
 
 ## Edge Cases
 Edge cases to address after completing basic scheduler:
-- Function takes more time than its own interval allows --> skip next iteration of that function
-- Function takes more time than we have until a separate function must be called --> call second func as soon as first returns, don’t skip
-- Not enough time to go into sleep + wake up --> just sit idle/spin for that time
 - Sleep timer isn’t working --> tower needs to keep functioning on its own, not just turn off permanently
   - conserve power if possible (later goal)
 - Can’t connect to network --> save something locally, upload offline later?
