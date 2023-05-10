@@ -160,21 +160,22 @@ def main():
         ensembles = json.load(f)
         f.close()
         next_ensemble = ensembles["next_ensemble"]
+        ens = ensembles["ensemble_list"]
     except:
-        next_ensemble = -1
-
-    ens = ensembles["ensemble_list"] # shortcut for active
+        next_ensemble = 0
+        setup()
 
     f = open(filename)
     ensembles = json.load(f)
     f.close()
 
+    ens = ensembles["ensemble_list"] # shortcut for active
+
     '''
     Checks if next_ensemble is already past current time
      If so, runs the ensemble, iterates next_ensemble and checks again
      If not,
-    If there's time to sleep, print very last statement about sleepTimer.sleep
-    If not enough time to sleep, time.sleep(sec)
+    If there's time to sleep, print very last statement about sleepTimer.sleepIf not enough time to sleep, time.sleep(sec)
     '''
     while (True):
         next_ensemble = ensembles["next_ensemble"]
@@ -203,9 +204,9 @@ def main():
 
             ensembles["next_ensemble"] += 1
 
-            ensemble_ofile = open(filename, "w")
-            json.dump(full_json, ensemble_ofile)
-            ensemble_ofile.close()
+            #ensemble_ofile = open(filename, "w")
+            #json.dump(full_json, ensemble_ofile)
+            #ensemble_ofile.close()
 
 
 if __name__ == '__main__':
