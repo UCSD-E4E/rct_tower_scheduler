@@ -53,9 +53,33 @@ Functions to perform should be stored in the following json format:
 {
   "ensemble_list": [
     {
-      "title": "example1",
-      "function": somefunc,
+      "title": "zeta1",
+      "function": "ensemble_tests.tester_functions.hello_world",
       "inputs": [],
+      "start_time": {
+          "hour": 8,
+          "minute": 0,
+          "second": 15
+      },
+      "iterations": 5,
+      "interval": 60
+    },
+    {
+      "title": "zeta2",
+      "function": "ensemble_tests.tester_functions.print_this",
+      "inputs": ["Hello World!"],
+      "start_time": {
+          "hour": 8,
+          "minute": 0,
+          "second": 30
+      },
+      "iterations": 5,
+      "interval": 60
+    },
+    {
+      "title": "dummy1",
+      "function": "ensemble_tests.tester_functions.add_this",
+      "inputs": [1, 2],
       "start_time": {
           "hour": 12,
           "minute": 0,
@@ -65,9 +89,9 @@ Functions to perform should be stored in the following json format:
       "interval": 60
     },
     {
-      "title": "example2",
-      "function": somefunc,
-      "inputs": [],
+      "title": "alpha1",
+      "function": "ensemble_tests.tester_functions.subtract_this",
+      "inputs": [1, 2],
       "start_time": {
           "hour": 12,
           "minute": 0,

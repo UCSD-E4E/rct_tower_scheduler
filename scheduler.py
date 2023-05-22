@@ -1,8 +1,7 @@
 import datetime
+import importlib.util
 import json
 import time
-import importlib.util
-
 
 TIME_SHUTDOWN = 5 # find real shutdon and wakeup times later
 TIME_WAKEUP = 5
@@ -121,32 +120,21 @@ def perform_ensemble_functions(filename: str = "dummy_ensembles.json"):
     with open(filename, encoding="utf-8") as user_file:
         file_contents = json.load(user_file)
     for i in file_contents['ensemble_list']:
-        module_name = i["module_name"]
-        module_directory = i["module_directory"]
-        class_name = i["class"]
-        function_name = i["function"]
+        function = i["function"].split(".") # Get function string
+        module_directory = '/'.join(function[:-1]) + ".py" # get directory
+        # by dropping the last index and replacing the . with /
+        module_name = function[-2] # module name should come before the function name
+        function_name = function[-1] # The last value of the list should be the function name
         function_inputs = i["inputs"]
         # Load module
-        # try:
         spec = importlib.util.spec_from_file_location(module_name,module_directory)
         module = importlib.util.module_from_spec(spec)
-        # except ModuleNotFoundError:
-        # raise ModuleNotFoundError("JSON module_directory: \
-        # {} is not found".format(module_directory))
+        # Perform function
         spec.loader.exec_module(module)
-        # If there is no class
-        if not class_name:
-            # Get function from module
-            class_function = getattr(module, function_name)
-            # Run function
-            class_function(*function_inputs)
-        else: # We're accessing a function from a class
-            # Get class from module
-            module_class = getattr(module, class_name)
-            # Get function from class
-            class_function = getattr(module_class, function_name)
-            # Run function
-            class_function(*function_inputs)
+        # Get function from module
+        class_function = getattr(module, function_name)
+        # Run function
+        class_function(*function_inputs)
 
 def check_ensemble_should_sleep(nearest_ens_time: int):
     '''
