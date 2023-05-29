@@ -6,22 +6,20 @@ class ControlFlowStateMachine:
 
     class States(Enum):
         WAKE_UP = auto()
-        READ_ACTIVE_ENSEMBLES = auto()
-        CHECK_NEXT_ENSEMBLE_IS_SETUP = auto()
         SETUP = auto()
-        CHECK_NEXT_ENSEMBLE_IS_TEARDOWN = auto()
-        TEARDOWN = auto()
-        ITERATE_NEXT_ENSEMBLE = auto()
-        EXECUTE_NEXT_ENSEMBLE = auto()
-        CHECK_NEXT_ENSEMBLE_PAST_CURR_TIME = auto()
-        CHECK_NEXT_ENSEMBLE_TOO_CLOSE_TO_SLEEP = auto()
-        SPINWAIT = auto()
-        CALC_SLEEP_TIME = auto()
+        ITERATE_ENSEMBLES = auto()
         SLEEP = auto()
+        SHUTDOWN = auto()
 
     class Events(Enum):
-        NO = auto()
-        YES = auto()
+        ENSEMBLE_SET_UP_TRUE = auto()
+        ENSEMBLE_SET_UP_FALSE = auto()
+
+        CAN_SLEEP = auto()
+        EXECUTE_NEXT = auto()
+
+        CAN_SHUTDOWN_TRUE = auto()
+        CAN_SHUTDOWN_FALSE = auto()
 
     def update(self, event: Events):
         self.currentState = ControlFlowStateMachine.reducer(self.currentState, event)
@@ -30,55 +28,28 @@ class ControlFlowStateMachine:
         newState: self.States = currentState
 
         if (currentState == self.States.WAKE_UP):
-            newState = self.States.READ_ACTIVE_ENSEMBLES
-
-        elif (currentState == self.States.READ_ACTIVE_ENSEMBLES):
-            newState = self.States.CHECK_NEXT_ENSEMBLE_IS_SETUP
-
-        elif (currentState == self.States.CHECK_NEXT_ENSEMBLE_IS_SETUP):
-            if (event == self.Events.YES):
+            if (event == self.Events.ENSEMBLE_SET_UP_FALSE):
                 newState = self.States.SETUP
-            elif (event == self.Events.NO): 
-                newState = self.States.CHECK_NEXT_ENSEMBLE_IS_TEARDOWN
-
-        elif (currentState == self.States.CHECK_NEXT_ENSEMBLE_IS_TEARDOWN):
-            if (event == self.Events.YES):
-                newState = self.States.TEARDOWN
-            elif (event == self.Events.NO): 
-                newState = self.States.EXECUTE_NEXT_ENSEMBLE
-
-        elif (currentState == self.States.TEARDOWN):
-            newState = self.States.SLEEP    
-
+            elif (event == self.Events.ENSEMBLE_SET_UP_TRUE):
+                newState = self.States.ITERATE_ENSEMBLES
+        
         elif (currentState == self.States.SETUP):
-            newState = self.States.ITERATE_NEXT_ENSEMBLE
+            newState = self.States.ITERATE_ENSEMBLES
 
-        elif (currentState == self.States.ITERATE_NEXT_ENSEMBLE):
-            newState = self.States.CHECK_NEXT_ENSEMBLE_PAST_CURR_TIME
-
-        elif (currentState == self.States.CHECK_NEXT_ENSEMBLE_PAST_CURR_TIME):
-            if (event == self.Events.YES):
-                newState = self.States.EXECUTE_NEXT_ENSEMBLE
-            elif (event == self.Events.NO): 
-                newState = self.States.CHECK_NEXT_ENSEMBLE_TOO_CLOSE_TO_SLEEP
-
-        elif (currentState == self.States.EXECUTE_NEXT_ENSEMBLE):
-            newState = self.States.ITERATE_NEXT_ENSEMBLE   
-
-        elif (currentState == self.States.CHECK_NEXT_ENSEMBLE_TOO_CLOSE_TO_SLEEP):
-            if (event == self.Events.YES):
-                newState = self.States.SPINWAIT
-            elif (event == self.Events.NO): 
-                newState = self.States.CALC_SLEEP_TIME
-
-        elif (currentState == self.States.SPINWAIT):
-            newState = self.States.EXECUTE_NEXT_ENSEMBLE  
-
-        elif (currentState == self.States.CALC_SLEEP_TIME):
-            newState = self.States.SLEEP  
+        elif (currentState == self.States.ITERATE_ENSEMBLES):
+            if (event == self.Events.CAN_SLEEP):
+                newState = self.States.SLEEP
+            # NOTE: This event encapsulates two scenarios
+            #       1. Missed execution time and skipped ensemble
+            #       2. Executed ensemble
+            elif (event == self.Events.EXECUTE_NEXT):
+                newState = self.States.ITERATE_ENSEMBLES
 
         elif (currentState == self.States.SLEEP):
-            newState = self.States.WAKE_UP
+            if (event == self.Events.CAN_SHUTDOWN_FALSE):
+                newState = self.States.ITERATE_ENSEMBLES
+            elif (event == self.Events.CAN_SHUTDOWN_TRUE):
+                newState = self.States.SHUTDOWN
 
         return newState
 
