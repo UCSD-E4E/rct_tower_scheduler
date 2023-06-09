@@ -10,12 +10,12 @@ then update() in a permanent loop.
 '''
 
 import json
-import time
 import sys
+import time
 
 # variables for selecting path in CHECK_TIME state
 SKIP = 0
-NOW = 1
+RUN = 1
 WAIT = 2
 RESET = 3
 
@@ -26,10 +26,10 @@ MISSED_ENS = 2
 TIMER_OFFLINE = 3
 
 
-TIME_SHUTDOWN = 5 # find real shutdon and wakeup times later
+TIME_SHUTDOWN = 5 # find real shutdown and wakeup times later
 TIME_WAKEUP = 5
 
-def hmsToSeconds(hour: int, min: int, sec: int):
+def hms_to_seconds(hour: int, min: int, sec: int):
     '''
     Convert hours, minutes, and seconds to just seconds
 
@@ -86,10 +86,10 @@ class WAKE_UP(State):
             sm.ens_list = sm.ens["ensemble_list"]
         except:
             sm.err_code = NO_ENS_FILE
-            sm.err_msg = "active_ensembles.json not found"
 
         now = time.localtime()
-        curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
+
 
         print("waking up at: " + str(curr_time_seconds))
 
@@ -118,30 +118,45 @@ class CHECK_TIME(State):
         print("CHECK_TIME process func")
         print("ens index: " + str(sm.ens_index))
 
+        # this is a small window where if the scheduler wakes up
+        # slightly early from sleep we allow it to run the ensemble anyway
+        TIME_BUFFER = 5
+
+
         if sm.ens_index < len(sm.ens_list):
             # read time from ensemble and compare to current_time
             now = time.localtime()
-            curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+            curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
 
             nearest_ens_time = sm.ens_list[sm.ens_index]["start_time"]
 
+                
             if nearest_ens_time < curr_time_seconds:
-                print("time past current ens, skipping")
-                self.check_time_ctrl = SKIP
-                sm.err_code = MISSED_ENS
-                # sm.err_msg = "Current ensemble past time, skipping ensemble "
-                # + sm.ens_list[sm.ens_index]["title"] + " at " + curr_time_seconds
-            elif nearest_ens_time == curr_time_seconds:
+                print("time past current ens, checking if should skip")
+                if sm.rst == True:
+                    if now.tm_wday == sm.day_of_ens:
+                        self.check_time_ctrl = WAIT
+                    else:
+                        self.check_time = SKIP
+                        sm.err_code = MISSED_ENS
+                else:
+                    self.check_time_ctrl = SKIP
+                    sm.err_code = MISSED_ENS
+            elif nearest_ens_time <= curr_time_seconds + TIME_BUFFER:
                 print("correct time for ensemble: " + sm.ens_list[sm.ens_index]["title"])
-                self.check_time_ctrl = NOW
+                self.check_time_ctrl = RUN
             else:
                 print("ensemble " + sm.ens_list[sm.ens_index]["title"] +
                       " is still in future, go to sleep")
                 self.check_time_ctrl = WAIT
+
+            sm.day_of_ens = now.tm_wday
+            sm.rst = False
         else:
             print("index beyond last ens, resetting")
             self.check_time_ctrl = RESET
             sm.ens_index = 0
+            sm.rst = True
 
 
     def update(self, sm):
@@ -154,7 +169,7 @@ class CHECK_TIME(State):
             sm.state = ERROR() # do we want to log this as error then recover?
         # if current_time == current_ensemble time,
         # transition to PERFORM_ENSEMBLE state
-        elif self.check_time_ctrl == NOW:
+        elif self.check_time_ctrl == RUN:
             sm.state = PERFORM_ENSEMBLE()
         # if current_time is less than current_ensemble time,
         # transition to SLEEP state
@@ -162,7 +177,7 @@ class CHECK_TIME(State):
             sm.state = SLEEP()
         # if all ensembles are done, need to sleep til first one of next day
         elif self.check_time_ctrl == RESET:
-            sm.state = SLEEP()
+            sm.state = CHECK_TIME()
 
 
 class ITERATE(State):
@@ -197,7 +212,7 @@ class PERFORM_ENSEMBLE(State):
         print("inside perform_ens for: " + sm.ens_list[sm.ens_index]["title"])
 
         now = time.localtime()
-        curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
         print("time is: " + str(curr_time_seconds))
         print("now leaving")
 
@@ -232,7 +247,7 @@ class SLEEP(State):
         # recalculate current_time vs current_ensemble time + wakeup + shutdown time
         # write to active_ensembles (next_ensemble variable)
         now = time.localtime()
-        curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
 
         nearest_ens_time = sm.ens_list[sm.ens_index]["start_time"]
 
@@ -303,7 +318,7 @@ class ERROR(State):
         print("ERROR process func")
 
         now = time.localtime()
-        curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
 
         if sm.err_code == NO_ENS_FILE:
             print(self.err_msgs[NO_ENS_FILE])
@@ -335,11 +350,13 @@ class StateMachine:
     '''
 
     def __init__(self):
+        self.day_of_ens = 0
         self.err_code = NO_ERR
         self.ens_filename = "active_ensembles.json"
         self.ens = ""
         self.ens_index = 0
         self.ens_list = ""
+        self.rst = False
         self.state = WAKE_UP()
 
     def run_machine(self):
