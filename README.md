@@ -20,7 +20,9 @@ Find tsleep as tn+1 - tn – tshutdown – twake, and communicate this to sleep 
 Assume some sleep(float time) function which tells the sleep timer to put given tower to sleep for time s.
 Remember to save variable indicating next set of communications to disk, since local memory will be wiped once tower goes to sleep.
 
-## Input File
+## Input
+
+### Initial File Format
 Functions to perform should be stored in the following json format:
 ```
 {
@@ -60,10 +62,36 @@ With each item being of the correct type:
   - hour: hour at which to start [0, 23]
   - minute: minute at which to start [0, 59]
   - second: second at which to start [0, 59]
-  0 is assumed for each of these if not specified
 - iterations: int
 - interval (seconds between iterations): double
-An example file, dummy_ensembles.json, is provided for testing purposes.
+
+### Useable File Format
+The initial file of ensembles is meant to be easy to write but is annoying
+to program around. We provide the `convertToActive.py` to convert the
+initial format into the `active_ensembles.json` file that the scheduler
+can use.
+
+Use it like this:
+```
+python convertToActive.py input_file.json
+```
+
+The script uses input file `ensembles.json` by default and always outputs
+to `active_ensembles.json`. Be careful since it will overwrite a previous
+active ensembles file.
+
+## Usage
+Once you have a proper `active_ensembles.json` file in the same directory
+as the scheduler, start it with:
+```
+python scheduler.py
+```
+
+## Testing
+- `dummy_ensembles.json` is provided as an example initial file
+- the `active_ensembles.json` provided is the scheduler-usable form of `dummy_ensembles.json`
+- start the scheduler as above to run it
+
 
 ## Outline
 1.	Fetch current ensemble (what should be performed) from disk
@@ -73,8 +101,11 @@ An example file, dummy_ensembles.json, is provided for testing purposes.
 5.	Save next ensemble to disk to indicate what comes next
 6.	Send sleep command to sleep timer
 
+![State machine diagram.](state_machine.png "This is our state machine.")
+
 ## Edge Cases
 Edge cases to address after completing basic scheduler:
-- Sleep timer isn’t working --> tower needs to keep functioning on its own, not just turn off permanently
-  - conserve power if possible (later goal)
-- Can’t connect to network --> save something locally, upload offline later?
+- [x] Sleep timer isn’t working --> tower will report error and resort to software sleep
+- [x] Not enough time for full hardware sleep --> scheduler will use a short software sleep
+- [x] Scheduler wakes up past an ensemble's time --> Skip that ensemble
+- [ ] Can’t connect to network --> save something locally, upload offline later?
