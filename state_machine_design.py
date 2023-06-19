@@ -137,7 +137,7 @@ class CHECK_TIME(State):
                     if now.tm_wday == sm.day_of_ens:
                         self.check_time_ctrl = WAIT
                     else:
-                        self.check_time = SKIP
+                        self.check_time_ctrl = SKIP
                         sm.err_code = MISSED_ENS
                 else:
                     self.check_time_ctrl = SKIP
