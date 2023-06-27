@@ -15,7 +15,7 @@ def teardown():
 
     seconds_in_day = 86400
 
-    filename = "active_ensembles.json"
+    filename = "dummy_ensembles.json"
     with open(filename, "r", encoding="utf-8") as f_in:
         ens = json.load(f_in)
 
@@ -32,12 +32,15 @@ def teardown():
 
     now = time.localtime()
     curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+    first_ensemble_start_converted = hmsToSeconds(first_ensemble_start["hour"],\
+                                    first_ensemble_start["minute"],first_ensemble_start["second"])
 
     print("time now: " + str(curr_time_seconds))
-    print("target time: " + str(first_ensemble_start))
+    print("target time: " + str(first_ensemble_start_converted))
 
     time_left_today = seconds_in_day - curr_time_seconds
-    time_to_sleep = time_left_today + first_ensemble_start
+    time_to_sleep = time_left_today + first_ensemble_start_converted
+    
     print("calling sleep timer for " + str(time_to_sleep) + " seconds")
     # call sleep timer here
 
@@ -88,7 +91,8 @@ def setup(filename: str = "dummy_ensembles.json"):
 	# teardown sets setup as next func then sleeps for 1-2 mins
     teardown = {}
     teardown["title"] = "teardown"
-    teardown["function"] = "teardown"
+    teardown["function"] = "scheduler.teardown"
+    teardown["inputs"] = []
     teardown["time"] = 86399 # one min before midnight
     all_ensembles.append(teardown)
 
@@ -106,35 +110,47 @@ def setup(filename: str = "dummy_ensembles.json"):
     ensemble_ofile.close()
 
 
+
 def someFunc():
     ''''
     simple printing function for use in testing
     '''
     print("someFunc called!")
 
-def perform_ensemble_functions(filename: str = "dummy_ensembles.json"):
+def perform_ensemble_functions(ensemble_index: int, filename: str = "active_ensembles.json"):
     '''
-    Function to call all dummy_ensembles.json functions for the day
+    Function to call one ensembles from a json functions
+    It is required that the json has the following parameters provided:
+    title: "str"
+    function: "dir_str.dir_str:function_str"
+    inputs: [Any] it can also be empty
+    runs for non-member functions and static functions. 
+    @param ensemble_index: index of the ensemble function being run
     @param filename: specifies file with ensemble specifications
     '''
     with open(filename, encoding="utf-8") as user_file:
         file_contents = json.load(user_file)
-    for i in file_contents['ensemble_list']:
-        function = i["function"].split(".") # Get function string
-        module_directory = '/'.join(function[:-1]) + ".py" # get directory
-        # by dropping the last index and replacing the . with /
-        module_name = function[-2] # module name should come before the function name
-        function_name = function[-1] # The last value of the list should be the function name
-        function_inputs = i["inputs"]
-        # Load module
-        spec = importlib.util.spec_from_file_location(module_name,module_directory)
-        module = importlib.util.module_from_spec(spec)
-        # Perform function
-        spec.loader.exec_module(module)
-        # Get function from module
-        class_function = getattr(module, function_name)
-        # Run function
-        class_function(*function_inputs)
+   
+    function = file_contents['ensemble_list'][ensemble_index]["function"].split(":") # Get function string
+    function_path = function[0].split(".")
+    function_inputs = file_contents['ensemble_list'][ensemble_index]["inputs"]
+    module_directory = '/'.join(function_path) + ".py" # get directory
+    # by dropping the last index and replacing the . with /
+    module_name = function_path[-1] # module name should come before the function name
+    function_name = function[-1] # The last value of the list should be the function name
+    # Load module
+    spec = importlib.util.spec_from_file_location(module_name,module_directory)
+    module = importlib.util.module_from_spec(spec)
+    # Perform function
+    spec.loader.exec_module(module)
+    # Get function from module
+    class_function = getattr(module, function_name)
+    # Run function
+    class_function(*function_inputs)
+
+            
+        
+
 
 def check_ensemble_should_sleep(nearest_ens_time: int):
     '''
@@ -215,7 +231,7 @@ def main():
             print(f"Temporary print replacing sleep: sleepTimer.sleep({str(sleep_time)})")
         else:
             print("performing ensemble functions: ")
-            perform_ensemble_functions()
+            perform_ensemble_functions(0) # TODO Iterate through the ensemble functions
             next_ensemble += 1
 
             ensembles["next_ensemble"] += 1
