@@ -148,10 +148,6 @@ def perform_ensemble_functions(ensemble_index: int, filename: str = "active_ense
     # Run function
     class_function(*function_inputs)
 
-            
-        
-
-
 def check_ensemble_should_sleep(nearest_ens_time: int, curr_time_seconds: int):
     '''
     Given the time of execution of an ensemble, determine whether we have enough
@@ -189,7 +185,6 @@ def check_ensemble_should_sleep(nearest_ens_time: int, curr_time_seconds: int):
         # Do not need to sleep any longer
         # return (False, 0)
 
-
 def main():
     filename = "active_ensembles.json"
 
@@ -211,7 +206,7 @@ def main():
 
     '''
     Checks if next_ensemble is already past current time
-     If so, runs the ensemble, iterates next_ensemble and checks again
+     If so, skips the ensemble
      If not,
     If there's time to sleep, print very last statement about sleepTimer.sleepIf not enough time to sleep, time.sleep(sec)
     '''
@@ -221,7 +216,18 @@ def main():
             break
 
         nearest_ens_time = ens[next_ensemble]["time"]
-        should_sleep, sleep_time = check_ensemble_should_sleep(nearest_ens_time)
+        # Get current time
+        now = time.localtime()
+        print("now in seconds: " + str(curr_time_seconds))
+        print("next ensemble time in seconds: " + str(nearest_ens_time))
+        curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
+        # Missed next ensemble time
+        if (nearest_ens_time < curr_time_seconds):
+            # Skip ensemble
+            ensembles["next_ensemble"] += 1
+            continue
+
+        should_sleep, sleep_time = check_ensemble_should_sleep(nearest_ens_time, curr_time_seconds)
 
         if (should_sleep):
             # someRefToSleepTimer.sleep(sleep_time)

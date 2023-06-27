@@ -1,4 +1,155 @@
 {
-   "next_ensemble" : -1
+    "ensemble_list": [
+        {
+            "title": "zeta1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 28815
+        },
+        {
+            "title": "zeta2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 28830
+        },
+        {
+            "title": "zeta1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 28875
+        },
+        {
+            "title": "zeta2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 28890
+        },
+        {
+            "title": "zeta1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 28935
+        },
+        {
+            "title": "zeta2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 28950
+        },
+        {
+            "title": "zeta1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 28995
+        },
+        {
+            "title": "zeta2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 29010
+        },
+        {
+            "title": "zeta1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 29055
+        },
+        {
+            "title": "zeta2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 29070
+        },
+        {
+            "title": "dummy2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 37800
+        },
+        {
+            "title": "dummy2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 41400
+        },
+        {
+            "title": "dummy1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43200
+        },
+        {
+            "title": "alpha1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43200
+        },
+        {
+            "title": "dummy1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43260
+        },
+        {
+            "title": "alpha1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43260
+        },
+        {
+            "title": "dummy1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43320
+        },
+        {
+            "title": "alpha1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43320
+        },
+        {
+            "title": "dummy1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43380
+        },
+        {
+            "title": "alpha1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43380
+        },
+        {
+            "title": "dummy1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43440
+        },
+        {
+            "title": "alpha1",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 43440
+        },
+        {
+            "title": "dummy2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 45000
+        },
+        {
+            "title": "dummy2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 48600
+        },
+        {
+            "title": "dummy2",
+            "function": "someFunc",
+            "inputs": [],
+            "start_time": 52200
+        }
+    ],
+    "next_ensemble": 0
 }
-
