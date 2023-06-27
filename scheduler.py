@@ -152,45 +152,42 @@ def perform_ensemble_functions(ensemble_index: int, filename: str = "active_ense
         
 
 
-def check_ensemble_should_sleep(nearest_ens_time: int):
+def check_ensemble_should_sleep(nearest_ens_time: int, curr_time_seconds: int):
     '''
     Given the time of execution of an ensemble, determine whether we have enough
     time for the tower to go into sleep before it will need to wake up again.
 
+    @precondition assumes that nearest_ens_time > curr_time_seconds 
     @param nearest_ens_time: time (in seconds) of next ensemble's execution
+    @param curr_time_seconds: current time (in seconds)
     @return should_sleep: True if tower has enough time to go into sleep and
                 wake up again before next ensemble, else false
             available_sleep_time: seconds for which tower may sleep
     '''
-    # Get current time
-    now = time.localtime()
-    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
-    print("now in seconds: " + str(curr_time_seconds))
-    print("next ensemble time in seconds: " + str(nearest_ens_time))
+    available_sleep_time = nearest_ens_time - curr_time_seconds - \
+        TIME_WAKEUP - TIME_SHUTDOWN
 
-    # Next ensemble time past current time
-    if (nearest_ens_time >= curr_time_seconds):
-        # Do not need to sleep
+    '''
+    TODO: check if sleep timer is responsive
+    if not, do time.sleep instead of calling sleep time
+    '''
+    # responsive = sleepTimer.checkResponsive()
+
+    # not enough time to go into sleep and wake up again before next ensemble
+    if available_sleep_time <= 0:
+        sleep_time = nearest_ens_time - curr_time_seconds
+        # time.sleep(sleep_time) # Wait using Python sleep function
+        print(f"Temporary print replace sleep: time.sleep({str(sleep_time)})")
+        # Do not need to sleep any longer
         return (False, 0)
     else:
-        available_sleep_time = nearest_ens_time - curr_time_seconds - \
-            TIME_WAKEUP - TIME_SHUTDOWN
-
-        '''
-        TODO: check if sleep timer is responsive
-        if not, do time.sleep instead of calling sleep timer
-        '''
-
-        # not enough time to go into sleep and wake up again before next ensemble
-        if available_sleep_time <= 0:
-            sleep_time = nearest_ens_time - curr_time_seconds
-            # time.sleep(sleep_time) # Wait using Python sleep function
-            print(f"Temporary print replace sleep: time.sleep({str(sleep_time)})")
-            # Do not need to sleep any longer
-            return (False, 0)
-        else:
-            # Need to send sleep command to sleep timer
-            return (True, available_sleep_time)
+        # if (responsive)
+        # Need to send sleep command to sleep timer
+        return (True, available_sleep_time)
+        # else:
+        # time.sleep(sleep_time) # Wait using Python sleep function
+        # Do not need to sleep any longer
+        # return (False, 0)
 
 
 def main():
