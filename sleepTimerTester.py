@@ -19,13 +19,21 @@ class SleepTimerTester:
     '''
     def __init__(self):
         self.memory = None
-        #self.time_to_sleep = 0
 
     def sleep(self, sec: int):
+        '''
+        Set this sleep timer's memory to store a number of seconds for which to
+        sleep
+        @param sec: number of seconds to sleep
+        '''
         self.memory.buf[:] = sec.to_bytes(4, "big")
-        #self.time_to_sleep = sec
-    
+
     def set_memory(self, memory: shared_memory.SharedMemory):
+        '''
+        Assign shared memory to this sleep timer, so it has a section of memory
+        which our parent process can access
+        @param memory: SharedMemory with a size of 4 bytes (to store one int)
+        '''
         self.memory = memory
 
 def main():
@@ -33,13 +41,13 @@ def main():
     sleep_timer = SleepTimerTester()
     sleep_timer.set_memory(memory)
 
-    while True:
+    while True: # TODO: have a more graceful exit condition
         print("running scheduler once")
-        
-        # start scheduler by forking new thread running scheduler.py
+
+        # start scheduler by forking new process running scheduler
         new_pid = os.fork()
         if new_pid == 0:
-            # run scheduler.py
+            # run state machine
             scheduler = StateMachine()
             scheduler.set_sleep_timer(sleep_timer)
             scheduler.run_machine()
@@ -52,7 +60,7 @@ def main():
             # shut down scheduler by killing child process running it
             os.kill(new_pid, signal.SIGKILL)
 
-            # sleep on daemon before rerunning scheduler in next iteration
+            # sleep on parent proc before rerunning scheduler in next iteration
             print("sleeping for " + str(int.from_bytes(memory.buf[:], "big")))
             time.sleep(int.from_bytes(memory.buf[:], "big"))
             memory.buf[:] = int(0).to_bytes(4, "big")

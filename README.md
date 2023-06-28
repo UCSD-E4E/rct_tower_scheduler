@@ -57,13 +57,13 @@ Functions to perform should be stored in the following json format:
 ```
 With each item being of the correct type:
 - function: Callable
-- inputs: void*, to be converted? Or a list of args & we trust user to match correct number and types of args to each function?
+- inputs: list of arguments which the user must confirm matches the correct number and types of args to the given function
 - starting time:
   - hour: hour at which to start [0, 23]
   - minute: minute at which to start [0, 59]
   - second: second at which to start [0, 59]
 - iterations: int
-- interval (seconds between iterations): double
+- interval (seconds between iterations): int
 
 ### Useable File Format
 The initial file of ensembles is meant to be easy to write but is annoying
@@ -92,20 +92,24 @@ python scheduler.py
 - the `active_ensembles.json` provided is the scheduler-usable form of `dummy_ensembles.json`
 - start the scheduler as above to run it
 
-
 ## Outline
 1.	Fetch current ensemble (what should be performed) from disk
-2.	Read file until reaching current ensemble, read functions to perform
-3.	Let tower perform functions in current ensemble
-4.	Perform calculations to find sleep duration given current time, time at which to perform next ensemble, and wakeup and shutdown times
-5.	Save next ensemble to disk to indicate what comes next
-6.	Send sleep command to sleep timer
+2.	Read current ensemble from file: functions to perform and time to perform them
+3.  Confirm it's time to execute this ensemble
+4.	Let tower perform functions in current ensemble
+5.	Perform calculations to find sleep duration given current time, time at which to perform next ensemble, and wakeup and shutdown times
+6.	Save next ensemble to disk to indicate what comes next
+7.	Send sleep command to sleep timer
 
+## State Machine Diagram
 ![State machine diagram.](state_machine.png "This is our state machine.")
 
-## Edge Cases
-Edge cases to address after completing basic scheduler:
-- [x] Sleep timer isn’t working --> tower will report error and resort to software sleep
-- [x] Not enough time for full hardware sleep --> scheduler will use a short software sleep
-- [x] Scheduler wakes up past an ensemble's time --> Skip that ensemble
-- [ ] Can’t connect to network --> save something locally, upload offline later?
+## To-Do Items
+- [ ] Execution of ensemble functions
+- [ ] Sleep timer tester (make a subclass of SleepTimer once interface is complete)
+- [ ] Determine time needed for shutdown and wakeup
+- [ ] Unit testing of component functions
+- [ ] System testing using fabricated schedules
+- [ ] Detect that sleep timer isn’t working (dependent on sleep timer interface)
+- [ ] Can’t connect to network --> save something locally, upload offline later (dependent on sleep timer interface)
+- [ ] Validate time synchronization between towers and GCS
