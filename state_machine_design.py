@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 '''
 state machine design attempt by Dylan
 
@@ -231,7 +233,7 @@ class SLEEP(State):
     '''
 
     def __init__(self):
-        self.sleep_timer_responsive = False
+        self.sleep_timer_responsive = True
         self.available_sleep_time = 0
 
 
@@ -264,13 +266,12 @@ class SLEEP(State):
             print("should be here if current time is less than next ens; next ens is on same day")
             self.available_sleep_time = nearest_ens_time - curr_time_seconds
 
-
     def update(self, sm):
         print("SLEEP update func")
 
         # if enough time call shutdown, or
         # transfer to SHUTDOWN state if we want one just to call shutdown func
-        if self.available_sleep_time >= TIME_WAKEUP + TIME_SHUTDOWN:
+        if self.available_sleep_time > TIME_WAKEUP + TIME_SHUTDOWN:
             if self.sleep_timer_responsive == True:
                 # write curr index to ens file then sleep
                 sm.ens["next_ensemble"] = sm.ens_index
@@ -280,12 +281,15 @@ class SLEEP(State):
 
                 f_out.close()
 
-                # someRefToSleepTimer.sleep(sleep_time)
+                print("calling sleep timer's sleep(" + str(self.available_sleep_time - TIME_WAKEUP - TIME_SHUTDOWN) + ")")
+                to_sleep = self.available_sleep_time - TIME_WAKEUP - TIME_SHUTDOWN
+                sm.get_sleep_timer().sleep(to_sleep)
+                time.sleep(1)
 
             else:
                 # Python sleep with full time, sleep timer is offline
                 # we sleep here then change to ERROR to report sleep timer problem
-                print("calling sleep timer for " + str(self.available_sleep_time) + " seconds")
+                print("calling python's time.sleep for " + str(self.available_sleep_time) + " seconds")
                 time.sleep(self.available_sleep_time) # Wait using Python sleep
                 sm.err_code = TIMER_OFFLINE
                 sm.state = ERROR()
@@ -359,14 +363,22 @@ class StateMachine:
         self.rst = False
         self.state = WAKE_UP()
 
+        self.__sleep_timer = None
+
     def run_machine(self):
         while True:
             self.state.process(self)
             self.state.update(self)
 
+    def set_sleep_timer(self, sleep_timer):
+        '''
+        Set this state machine's sleep timer reference
+        '''
+        self.__sleep_timer = sleep_timer
+
+    def get_sleep_timer(self):
+        return self.__sleep_timer
 
 if __name__ == "__main__":
     control_flow = StateMachine()
-
-
     control_flow.run_machine()

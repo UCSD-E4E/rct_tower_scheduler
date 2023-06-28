@@ -53,12 +53,12 @@
       "function": "someFunc",
       "inputs": [],
       "start_time": {
-          "hour": 10,
-          "minute": 30,
+          "hour": 12,
+          "minute": 12,
           "second": 0
       },
       "iterations": 5,
-      "interval": 3600
+      "interval": 60
     }
   ]
 }

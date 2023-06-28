@@ -27,7 +27,7 @@ def sort_func(ens):
 def main():
     """read the ensembles file, enumerate all ensembles and iterations,
        sort them, then write them into active_ensembles.json"""
-    filein = "ensembles.json"
+    filein = "dummy_ensembles.json"
     if len(sys.argv) > 1 :
         filein = sys.argv[1]
 
