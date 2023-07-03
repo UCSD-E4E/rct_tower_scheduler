@@ -1,8 +1,11 @@
 #!/usr/bin/python3
 
+import logging
+import math
 from multiprocessing import shared_memory
 import os
 import signal
+import sys
 import time
 
 from state_machine_design import StateMachine
@@ -19,45 +22,80 @@ class SleepTimerTester:
     '''
     def __init__(self):
         self.memory = None
-        #self.time_to_sleep = 0
+        self.starttime = 0
 
     def sleep(self, sec: int):
-        self.memory.buf[:] = sec.to_bytes(4, "big")
-        #self.time_to_sleep = sec
+        self.sleeptime_memory.buf[:] = sec.to_bytes(4, "big")
+        self.starttime_memory.buf[:] = int(time.time()).to_bytes(8, "big")
     
-    def set_memory(self, memory: shared_memory.SharedMemory):
-        self.memory = memory
+    def set_sleeptime_memory(self, memory: shared_memory.SharedMemory):
+        self.sleeptime_memory = memory
+
+    def set_starttime_memory(self, memory: shared_memory.SharedMemory):
+        self.starttime_memory = memory
 
 def main():
-    memory = shared_memory.SharedMemory(create=True, size=4)
+    logger = logging.getLogger("sleep_timer_tester")
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(levelname)s: %(name)s: %(message)s')
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    sleeptime_memory = shared_memory.SharedMemory(create=True, size=4)
     sleep_timer = SleepTimerTester()
-    sleep_timer.set_memory(memory)
+    sleep_timer.set_sleeptime_memory(sleeptime_memory)
+    
+    starttime_memory = shared_memory.SharedMemory(create=True, size=8)
+    sleep_timer.set_starttime_memory(starttime_memory)
 
-    while True:
-        print("running scheduler once")
-        
-        # start scheduler by forking new thread running scheduler.py
-        new_pid = os.fork()
-        if new_pid == 0:
-            # run scheduler.py
-            scheduler = StateMachine()
-            scheduler.set_sleep_timer(sleep_timer)
-            scheduler.run_machine()
-            #os.execl("./state_machine_design.py", "./state_machine_design.py")
-        else:
-            # wait for command sleep(x)
-            while int.from_bytes(memory.buf[:], "big") == 0:
-                time.sleep(1)
+    starttime = time.time()
+    new_pid = -1
 
-            # shut down scheduler by killing child process running it
+    try: 
+        while True:
+            logger.debug("running scheduler once")
+
+            # start scheduler by forking new thread running scheduler.py
+            new_pid = os.fork()
+            if new_pid == 0:
+                # run scheduler.py
+                scheduler = StateMachine()
+                scheduler.set_sleep_timer(sleep_timer)
+                
+                endtime = time.time()
+                wakeup = math.ceil(endtime - starttime)
+                logger.info("WAKEUP TIME: " + str(wakeup) + " seconds")
+
+                scheduler.run_machine()
+                #os.execl("./state_machine_design.py", "./state_machine_design.py")
+            else:
+                # wait for command sleep(x)
+                while int.from_bytes(sleeptime_memory.buf[:], "big") == 0:
+                    time.sleep(1)
+
+                # shut down scheduler by killing child process running it
+                os.kill(new_pid, signal.SIGKILL)
+                starttime = int.from_bytes(starttime_memory.buf[:], "big")
+                endtime = time.time()
+                shutdown = math.ceil(endtime - starttime)
+                logger.info("SHUTDOWN TIME: " + str(shutdown) + " seconds")
+
+                # sleep on daemon before rerunning scheduler in next iteration
+                logger.info("sleeping for " + str(int.from_bytes(sleeptime_memory.buf[:], "big")))
+                time.sleep(int.from_bytes(sleeptime_memory.buf[:], "big"))
+                starttime = time.time()
+                sleeptime_memory.buf[:] = int(0).to_bytes(4, "big")
+    except KeyboardInterrupt:
+        if new_pid > 0:
+            print("")
+            logger.info("received interrupt from user, exiting now...")
             os.kill(new_pid, signal.SIGKILL)
-
-            # sleep on daemon before rerunning scheduler in next iteration
-            print("sleeping for " + str(int.from_bytes(memory.buf[:], "big")))
-            time.sleep(int.from_bytes(memory.buf[:], "big"))
-            memory.buf[:] = int(0).to_bytes(4, "big")
-
-    memory.close()
+            sleeptime_memory.close()
+            starttime_memory.close()
+            sleeptime_memory.unlink()
+            starttime_memory.unlink()
 
 if __name__ == '__main__':
     main()
