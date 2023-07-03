@@ -227,7 +227,7 @@ def main():
             print(f"Temporary print replacing sleep: sleepTimer.sleep({str(sleep_time)})")
         else:
             print("performing ensemble functions: ")
-            perform_ensemble_functions(0, filename) # TODO Iterate through the ensemble functions
+            perform_ensemble_functions(next_ensemble, filename) # TODO Iterate through the ensemble functions
             next_ensemble += 1
 
             ensembles["next_ensemble"] += 1
