@@ -7,15 +7,11 @@ import time
 
 from state_machine_design import StateMachine
 
-'''
-Ideally, we make a SleepTimerTester object which inherits from SleepTimer.
-Then, we run the scheduler itself with any SleepTimer object, which can include a tester.
-'''
 class SleepTimerTester:
     '''
-    SleepTimer object specifically for testing. This should inherit from SleepTimer once
-    that package is completed. Scheduler can be run with any SleepTimer object, which,
-    in this case, is our tester.
+    SleepTimer object specifically for testing. This should inherit from
+    SleepTimer once that package is completed. Scheduler can be run with any
+    SleepTimer object, which, in this case, is our tester.
     '''
     def __init__(self):
         self.memory = None
@@ -23,7 +19,7 @@ class SleepTimerTester:
     def sleep(self, sec: int):
         '''
         Set this sleep timer's memory to store a number of seconds for which to
-        sleep
+        sleep. Memory must have already been set before calling this function.
         @param sec: number of seconds to sleep
         '''
         self.memory.buf[:] = sec.to_bytes(4, "big")
@@ -40,32 +36,39 @@ def main():
     memory = shared_memory.SharedMemory(create=True, size=4)
     sleep_timer = SleepTimerTester()
     sleep_timer.set_memory(memory)
+    new_pid = -1
 
-    while True: # TODO: have a more graceful exit condition
-        print("running scheduler once")
+    try:
+        while True:
+            print("running scheduler once")
 
-        # start scheduler by forking new process running scheduler
-        new_pid = os.fork()
-        if new_pid == 0:
-            # run state machine
-            scheduler = StateMachine()
-            scheduler.set_sleep_timer(sleep_timer)
-            scheduler.run_machine()
-            #os.execl("./state_machine_design.py", "./state_machine_design.py")
-        else:
-            # wait for command sleep(x)
-            while int.from_bytes(memory.buf[:], "big") == 0:
-                time.sleep(1)
+            # start scheduler by forking new process running scheduler
+            new_pid = os.fork()
+            if new_pid == 0:
+                # run state machine
+                scheduler = StateMachine()
+                scheduler.set_sleep_timer(sleep_timer)
+                scheduler.run_machine()
+                #os.execl("./state_machine_design.py", "./state_machine_design.py")
+            else:
+                # wait for command sleep(x)
+                while int.from_bytes(memory.buf[:], "big") == 0:
+                    time.sleep(1)
 
-            # shut down scheduler by killing child process running it
+                # shut down scheduler by killing child process running it
+                os.kill(new_pid, signal.SIGKILL)
+
+                # sleep on parent proc before rerunning scheduler in next iteration
+                print("sleeping for " + str(int.from_bytes(memory.buf[:], "big")))
+                time.sleep(int.from_bytes(memory.buf[:], "big"))
+                memory.buf[:] = int(0).to_bytes(4, "big")
+
+    except KeyboardInterrupt:
+        print("received interrupt from user, exiting now...")
+        if new_pid > 0:
             os.kill(new_pid, signal.SIGKILL)
-
-            # sleep on parent proc before rerunning scheduler in next iteration
-            print("sleeping for " + str(int.from_bytes(memory.buf[:], "big")))
-            time.sleep(int.from_bytes(memory.buf[:], "big"))
-            memory.buf[:] = int(0).to_bytes(4, "big")
-
-    memory.close()
+        memory.close()
+        memory.unlink()
 
 if __name__ == '__main__':
     main()

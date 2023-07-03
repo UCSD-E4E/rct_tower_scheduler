@@ -80,10 +80,6 @@ class WAKE_UP(State):
             with open(sm.ens_filename, "r", encoding="utf-8") as f_in:
                 sm.ens = json.load(f_in)
 
-            f_in.close()
-            # f = open(sm.ens_filename)
-            # sm.ens = json.load(f)
-            # f.close()
             sm.ens_index = sm.ens["next_ensemble"]
             sm.ens_list = sm.ens["ensemble_list"]
         except:
@@ -124,7 +120,6 @@ class CHECK_TIME(State):
         # slightly early from sleep we allow it to run the ensemble anyway
         TIME_BUFFER = 5
 
-
         if sm.ens_index < len(sm.ens_list):
             # read time from ensemble and compare to current_time
             now = time.localtime()
@@ -132,7 +127,6 @@ class CHECK_TIME(State):
 
             nearest_ens_time = sm.ens_list[sm.ens_index]["start_time"]
 
-                
             if nearest_ens_time < curr_time_seconds:
                 print("time past current ens, checking if should skip")
                 if sm.rst == True:
@@ -160,23 +154,25 @@ class CHECK_TIME(State):
             sm.ens_index = 0
             sm.rst = True
 
-
     def update(self, sm):
         print("CHECK_TIME update func")
 
-        # if current_time is passed current_ensemble time,
+        # if current_time is past current_ensemble time,
         # transition to ITERATE
         if self.check_time_ctrl == SKIP:
             # sm.state = ITERATE() # switch with below line to disable error log on skip
-            sm.state = ERROR() # do we want to log this as error then recover?
+            sm.state = ERROR()
+
         # if current_time == current_ensemble time,
         # transition to PERFORM_ENSEMBLE state
         elif self.check_time_ctrl == RUN:
             sm.state = PERFORM_ENSEMBLE()
+
         # if current_time is less than current_ensemble time,
         # transition to SLEEP state
         elif self.check_time_ctrl == WAIT:
             sm.state = SLEEP()
+
         # if all ensembles are done, need to sleep til first one of next day
         elif self.check_time_ctrl == RESET:
             sm.state = CHECK_TIME()
@@ -184,8 +180,7 @@ class CHECK_TIME(State):
 
 class ITERATE(State):
     '''
-    ITERATE just increases the index by one then passes
-    back to CHECK_TIME
+    ITERATE increases the index by one, then passes back to CHECK_TIME
     '''
 
     def process(self, sm):
@@ -209,6 +204,7 @@ class PERFORM_ENSEMBLE(State):
 
     def process(self, sm):
         print("PERFORM process func")
+
         # run the function of the current ensemble
 
         print("inside perform_ens for: " + sm.ens_list[sm.ens_index]["title"])
@@ -244,7 +240,6 @@ class SLEEP(State):
 
         # check if sleep timer is online or not
         # sleep_timer_responsive = sleepTimer.checkResponsive()
-
 
         # recalculate current_time vs current_ensemble time + wakeup + shutdown time
         # write to active_ensembles (next_ensemble variable)
@@ -297,7 +292,7 @@ class SLEEP(State):
         else:
             # if not enough time, call python sleep timer then
             # transition to CHECK_TIME state
-            print("calling sleep timer for " + str(self.available_sleep_time) + " seconds")
+            print("calling python's time.sleep for " + str(self.available_sleep_time) + " seconds")
             time.sleep(self.available_sleep_time) # Wait using Python sleep
             print("changing state to CHECK_TIME")
             sm.state = CHECK_TIME()
@@ -314,7 +309,6 @@ class ERROR(State):
                          "No active_ensembles.json file found. Unable to continue.\n",   # 1
                          "Skipping past missed ensemble.\n",                             # 2
                          "Hardware timer unresponsive. Defaulting to software sleep.\n"] # 3
-
 
     def process(self, sm):
         # print error message (and/or log it in a file?)
@@ -344,7 +338,7 @@ class ERROR(State):
         elif sm.err_code == TIMER_OFFLINE:
             # the SLEEP state handles the software sleep so ERROR
             # just logs the error then passes back to ITERATE
-            sm.state = ITERATE()
+            sm.state = CHECK_TIME()
 
 
 class StateMachine:
@@ -359,7 +353,7 @@ class StateMachine:
         self.ens_filename = "active_ensembles.json"
         self.ens = ""
         self.ens_index = 0
-        self.ens_list = ""
+        self.ens_list = []
         self.rst = False
         self.state = WAKE_UP()
 
