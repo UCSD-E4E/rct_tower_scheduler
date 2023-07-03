@@ -28,36 +28,56 @@ Functions to perform should be stored in the following json format:
 {
   "ensemble_list": [
     {
-      "title": "example1",
-      "function": somefunc,
-      "inputs": [],
-      "start_time": {
-          "hour": 12,
-          "minute": 0,
-          "second": 0
-      },
-      "iterations": 5,
-      "interval": 60
-    },
-    {
-      "title": "example2",
-      "function": somefunc,
-      "inputs": [],
-      "start_time": {
-          "hour": 12,
-          "minute": 0,
-          "second": 0
-      },
-      "iterations": 5,
-      "interval": 60
-    }
+            "title": "zeta2",
+            "function": "path_to_module.module:print_function",
+            "inputs": [
+                "Hello World!"
+            ],
+            "start_time": {
+                "hour": 8,
+                "minute": 0,
+                "second": 30
+            },
+            "iterations": 5,
+            "interval": 60
+        },
+        {
+            "title": "dummy1",
+            "function": "path_to_module.module:addition_function",
+            "inputs": [
+                1,
+                2
+            ],
+            "start_time": {
+                "hour": 12,
+                "minute": 0,
+                "second": 0
+            },
+            "iterations": 5,
+            "interval": 60
+        },
+        {
+            "title": "alpha1",
+            "function": "path_to_module.module:subtraction_function",
+            "inputs": [
+                1,
+                2
+            ],
+            "start_time": {
+                "hour": 12,
+                "minute": 0,
+                "second": 0
+            },
+            "iterations": 5,
+            "interval": 60
+        }
     ...etc...
   ]
 }
 ```
 With each item being of the correct type:
-- function: Callable
-- inputs: void*, to be converted? Or a list of args & we trust user to match correct number and types of args to each function?
+- function: period-delimited path to a callable function followed by function name, separated by a colon
+- inputs: list of primitive type arguments to the given function, which the user must confirm are the correct type
 - starting time:
   - hour: hour at which to start [0, 23]
   - minute: minute at which to start [0, 59]
