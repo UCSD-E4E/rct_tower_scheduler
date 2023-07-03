@@ -25,13 +25,28 @@ class SleepTimerTester:
         self.starttime = 0
 
     def sleep(self, sec: int):
+        '''
+        Set this sleep timer's memory to store a number of seconds for which to
+        sleep
+        @param sec: number of seconds to sleep
+        '''
         self.sleeptime_memory.buf[:] = sec.to_bytes(4, "big")
         self.starttime_memory.buf[:] = int(time.time()).to_bytes(8, "big")
     
     def set_sleeptime_memory(self, memory: shared_memory.SharedMemory):
+        '''
+        Assign shared memory to this sleep timer, so it has a section of memory
+        which our parent process can use to access sleep length.
+        @param memory: SharedMemory with a size of 4 bytes (to store one int)
+        '''
         self.sleeptime_memory = memory
 
     def set_starttime_memory(self, memory: shared_memory.SharedMemory):
+        '''
+        Assign shared memory to this sleep timer, so it has a section of memory
+        which our parent process can use to access beginning of shutdown time.
+        @param memory: SharedMemory with a size of 8 bytes (to store one long)
+        '''
         self.starttime_memory = memory
 
 def main():
@@ -43,8 +58,9 @@ def main():
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
-    sleeptime_memory = shared_memory.SharedMemory(create=True, size=4)
     sleep_timer = SleepTimerTester()
+    
+    sleeptime_memory = shared_memory.SharedMemory(create=True, size=4)
     sleep_timer.set_sleeptime_memory(sleeptime_memory)
     
     starttime_memory = shared_memory.SharedMemory(create=True, size=8)
@@ -87,6 +103,7 @@ def main():
                 time.sleep(int.from_bytes(sleeptime_memory.buf[:], "big"))
                 starttime = time.time()
                 sleeptime_memory.buf[:] = int(0).to_bytes(4, "big")
+
     except KeyboardInterrupt:
         if new_pid > 0:
             print("")
