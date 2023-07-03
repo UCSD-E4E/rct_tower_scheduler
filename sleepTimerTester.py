@@ -67,7 +67,12 @@ def main():
     sleep_timer.set_starttime_memory(starttime_memory)
 
     starttime = time.time()
+    wakeup = 5 # starting value for wakeup time, can inc
+    shutdown = 5 # starting value for shutdown time, can inc
     new_pid = -1
+    
+    # constant to add to calculated wakeup and shutdown times, to be safe
+    BUFFER_TIME = 2
 
     try: 
         while True:
@@ -79,9 +84,11 @@ def main():
                 # run scheduler.py
                 scheduler = StateMachine()
                 scheduler.set_sleep_timer(sleep_timer)
-                
+                scheduler.set_wakeup(wakeup)
+                scheduler.set_shutdown(shutdown)
+
                 endtime = time.time()
-                wakeup = math.ceil(endtime - starttime)
+                wakeup = max(math.ceil(endtime - starttime + BUFFER_TIME), wakeup)
                 logger.info("WAKEUP TIME: " + str(wakeup) + " seconds")
 
                 scheduler.run_machine()
@@ -95,7 +102,7 @@ def main():
                 os.kill(new_pid, signal.SIGKILL)
                 starttime = int.from_bytes(starttime_memory.buf[:], "big")
                 endtime = time.time()
-                shutdown = math.ceil(endtime - starttime)
+                shutdown = max(math.ceil(endtime - starttime + BUFFER_TIME), shutdown)
                 logger.info("SHUTDOWN TIME: " + str(shutdown) + " seconds")
 
                 # sleep on daemon before rerunning scheduler in next iteration

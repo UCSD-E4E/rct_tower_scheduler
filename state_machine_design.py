@@ -12,6 +12,7 @@ then update() in a permanent loop.
 '''
 
 import json
+import logging
 import sys
 import time
 
@@ -26,10 +27,6 @@ NO_ERR = 0
 NO_ENS_FILE = 1
 MISSED_ENS = 2
 TIMER_OFFLINE = 3
-
-
-TIME_SHUTDOWN = 5 # find real shutdown and wakeup times later
-TIME_WAKEUP = 5
 
 def hms_to_seconds(hour: int, min: int, sec: int):
     '''
@@ -271,7 +268,7 @@ class SLEEP(State):
 
         # if enough time call shutdown, or
         # transfer to SHUTDOWN state if we want one just to call shutdown func
-        if self.available_sleep_time > TIME_WAKEUP + TIME_SHUTDOWN:
+        if self.available_sleep_time > sm.get_wakeup_time() + sm.get_shutdown_time():
             if self.sleep_timer_responsive == True:
                 # write curr index to ens file then sleep
                 sm.ens["next_ensemble"] = sm.ens_index
@@ -281,8 +278,8 @@ class SLEEP(State):
 
                 f_out.close()
 
-                print("calling sleep timer's sleep(" + str(self.available_sleep_time - TIME_WAKEUP - TIME_SHUTDOWN) + ")")
-                to_sleep = self.available_sleep_time - TIME_WAKEUP - TIME_SHUTDOWN
+                print("calling sleep timer's sleep(" + str(self.available_sleep_time - (sm.get_wakeup_time() + sm.get_shutdown_time())) + ")")
+                to_sleep = self.available_sleep_time - (sm.get_wakeup_time() + sm.get_shutdown_time())
                 sm.get_sleep_timer().sleep(to_sleep)
                 time.sleep(1)
 
@@ -364,6 +361,8 @@ class StateMachine:
         self.state = WAKE_UP()
 
         self.__sleep_timer = None
+        self.__wakeup_time = 5
+        self.__shutdown_time = 5
 
     def run_machine(self):
         while True:
@@ -378,6 +377,22 @@ class StateMachine:
 
     def get_sleep_timer(self):
         return self.__sleep_timer
+
+    def set_wakeup(self, sec: int):
+        if (sec < self.__wakeup_time):
+            logging.info("new wakeup time is less than previous!")
+        self.__wakeup_time = sec
+
+    def get_wakeup_time(self):
+        return self.__wakeup_time
+
+    def set_shutdown(self, sec: int):
+        if (sec < self.__shutdown_time):
+            logging.info("new shutdown time is less than previous!")
+        self.__shutdown_time = sec
+
+    def get_shutdown_time(self):
+        return self.__shutdown_time
 
 if __name__ == "__main__":
     control_flow = StateMachine()
