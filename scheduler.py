@@ -110,13 +110,6 @@ def setup(filename: str = "dummy_ensembles.json"):
     ensemble_ofile.close()
 
 
-
-def someFunc():
-    ''''
-    simple printing function for use in testing
-    '''
-    print("someFunc called!")
-
 def perform_ensemble_functions(ensemble_index: int, filename: str = "active_ensembles.json"):
     '''
     Function to call one ensembles from a json functions
@@ -234,7 +227,7 @@ def main():
             print(f"Temporary print replacing sleep: sleepTimer.sleep({str(sleep_time)})")
         else:
             print("performing ensemble functions: ")
-            perform_ensemble_functions(0) # TODO Iterate through the ensemble functions
+            perform_ensemble_functions(0, filename) # TODO Iterate through the ensemble functions
             next_ensemble += 1
 
             ensembles["next_ensemble"] += 1

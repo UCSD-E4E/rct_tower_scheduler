@@ -29,7 +29,7 @@ Functions to perform should be stored in the following json format:
   "ensemble_list": [
     {
             "title": "zeta2",
-            "function": "ensemble_tests.tester_functions:print_this",
+            "function": "path_to_module.module:print_function",
             "inputs": [
                 "Hello World!"
             ],
@@ -43,7 +43,7 @@ Functions to perform should be stored in the following json format:
         },
         {
             "title": "dummy1",
-            "function": "ensemble_tests.tester_functions:add_this",
+            "function": "path_to_module.module:addition_function",
             "inputs": [
                 1,
                 2
@@ -58,7 +58,7 @@ Functions to perform should be stored in the following json format:
         },
         {
             "title": "alpha1",
-            "function": "ensemble_tests.tester_functions:subtract_this",
+            "function": "path_to_module.module:subtraction_function",
             "inputs": [
                 1,
                 2
@@ -76,8 +76,8 @@ Functions to perform should be stored in the following json format:
 }
 ```
 With each item being of the correct type:
-- function: Callable
-- inputs: void*, to be converted? Or a list of args & we trust user to match correct number and types of args to each function?
+- function: period-delimited path to a callable function followed by function name, separated by a colon
+- inputs: list of primitive type arguments to the given function, which the user must confirm are the correct type
 - starting time:
   - hour: hour at which to start [0, 23]
   - minute: minute at which to start [0, 59]
