@@ -10,9 +10,9 @@ then update() in a permanent loop.
 '''
 
 import json
+import logging
 import sys
 import time
-import logging
 
 # variables for selecting path in CHECK_TIME state
 SKIP = 0
@@ -336,7 +336,7 @@ class ERROR(State):
         elif sm.err_code == TIMER_OFFLINE:
             # the SLEEP state handles the software sleep so ERROR
             # just logs the error then passes back to ITERATE
-            sm.state = ITERATE()
+            sm.state = CHECK_TIME()
 
 
 class StateMachine:
