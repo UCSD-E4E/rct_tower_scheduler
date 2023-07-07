@@ -9,6 +9,8 @@ at the bottom we just create a state machine object and run process()
 then update() in a permanent loop.
 '''
 
+import datetime
+import importlib.util
 import json
 import logging
 import sys
@@ -206,6 +208,7 @@ class PERFORM_ENSEMBLE(State):
     def process(self, sm):
         logging.info("Running PERFORM process func")
         # run the function of the current ensemble
+        self.perform_ensemble_functions(sm.ens_index)
 
         logging.info(f"Finished perform_ens of {sm.ens_list[sm.ens_index]['title']}")
 
@@ -217,6 +220,37 @@ class PERFORM_ENSEMBLE(State):
         logging.info("Running PERFORM update func")
         # always transition to ITERATE state
         sm.state = ITERATE()
+
+    def perform_ensemble_functions(self, ensemble_index: int, filename: str = "active_ensembles.json"):
+        '''
+        Function to call one ensembles from a json functions
+        It is required that the json has the following parameters provided:
+        title: "str"
+        function: "dir_str.dir_str:function_str"
+        inputs: [Any] it can also be empty
+        runs for non-member functions and static functions. 
+        @param ensemble_index: index of the ensemble function being run
+        @param filename: specifies file with ensemble specifications
+        '''
+        with open(filename, encoding="utf-8") as user_file:
+            file_contents = json.load(user_file)
+    
+        function = file_contents['ensemble_list'][ensemble_index]["function"].split(":") # Get function string
+        function_path = function[0].split(".")
+        function_inputs = file_contents['ensemble_list'][ensemble_index]["inputs"]
+        module_directory = '/'.join(function_path) + ".py" # get directory
+        # by dropping the last index and replacing the . with /
+        module_name = function_path[-1] # module name should come before the function name
+        function_name = function[-1] # The last value of the list should be the function name
+        # Load module
+        spec = importlib.util.spec_from_file_location(module_name,module_directory)
+        module = importlib.util.module_from_spec(spec)
+        # Perform function
+        spec.loader.exec_module(module)
+        # Get function from module
+        class_function = getattr(module, function_name)
+        # Run function
+        class_function(*function_inputs)
 
 
 class SLEEP(State):
