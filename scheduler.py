@@ -61,7 +61,7 @@ class WAKE_UP(State):
     '''
 
     def process(self, sm):
-        logging.info("Running WAKE_UP process func")
+        sm.logger.info("Running WAKE_UP process func")
 
         # read active ensembles file
         try:
@@ -76,10 +76,10 @@ class WAKE_UP(State):
         now = time.localtime()
         curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
 
-        logging.info(f"Waking up at seconds = {str(curr_time_seconds)}")
+        sm.logger.info(f"Waking up at seconds = {str(curr_time_seconds)}")
 
     def update(self, sm):
-        logging.info("Running WAKE_UP update func")
+        sm.logger.info("Running WAKE_UP update func")
         # if active ensembles file not found or other reading with error,
         # transition to ERROR state
         if sm.err_code != NO_ERR:
@@ -99,8 +99,8 @@ class CHECK_TIME(State):
         self.check_time_ctrl = SKIP
 
     def process(self, sm):
-        logging.info("Running CHECK_TIME process func")
-        logging.info(f"Current ens index = {str(sm.ens_index)}")
+        sm.logger.info("Running CHECK_TIME process func")
+        sm.logger.info(f"Current ens index = {str(sm.ens_index)}")
 
         # this is a small window where if the scheduler wakes up
         # slightly early from sleep we allow it to run the ensemble anyway
@@ -115,7 +115,7 @@ class CHECK_TIME(State):
             nearest_ens_time = sm.ens_list[sm.ens_index]["start_time"]
 
             if nearest_ens_time < curr_time_seconds:
-                logging.info("Time is past current ens, checking for skip")
+                sm.logger.info("Time is past current ens, checking for skip")
                 if sm.rst == True:
                     if now.tm_wday == sm.day_of_ens:
                         self.check_time_ctrl = WAIT
@@ -126,24 +126,24 @@ class CHECK_TIME(State):
                     self.check_time_ctrl = SKIP
                     sm.err_code = MISSED_ENS
             elif nearest_ens_time <= curr_time_seconds + TIME_BUFFER:
-                logging.info("Correct time for ensemble: " + \
+                sm.logger.info("Correct time for ensemble: " + \
                                 f"{sm.ens_list[sm.ens_index]['title']}")
                 self.check_time_ctrl = RUN
             else:
-                logging.info(f"ensemble {sm.ens_list[sm.ens_index]['title']} " \
+                sm.logger.info(f"ensemble {sm.ens_list[sm.ens_index]['title']} " \
                                 + "is still in future, go to sleep")
                 self.check_time_ctrl = WAIT
 
             sm.day_of_ens = now.tm_wday
             sm.rst = False
         else:
-            logging.info("Index beyond last ens, resetting")
+            sm.logger.info("Index beyond last ens, resetting")
             self.check_time_ctrl = RESET
             sm.ens_index = 0
             sm.rst = True
 
     def update(self, sm):
-        logging.info("Running CHECK_TIME update func")
+        sm.logger.info("Running CHECK_TIME update func")
 
         # if current_time is passed current_ensemble time,
         # transition to ITERATE
@@ -171,13 +171,13 @@ class ITERATE(State):
     '''
 
     def process(self, sm):
-        logging.info("Running ITERATE process func")
+        sm.logger.info("Running ITERATE process func")
 
         # increment the current_ensemble variable
         sm.ens_index += 1
 
     def update(self, sm):
-        logging.info("Running ITERATE update func")
+        sm.logger.info("Running ITERATE update func")
 
         # transition to CHECK_TIME state
         sm.state = CHECK_TIME()
@@ -189,19 +189,19 @@ class PERFORM_ENSEMBLE(State):
     '''
 
     def process(self, sm):
-        logging.info("Running PERFORM process func")
+        sm.logger.info("Running PERFORM process func")
 
         # run the function of the current ensemble
         self.perform_ensemble_functions(sm.ens_index)
 
-        logging.info(f"Done performing {sm.ens_list[sm.ens_index]['title']}")
+        sm.logger.info(f"Done performing {sm.ens_list[sm.ens_index]['title']}")
 
         now = time.localtime()
         curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
-        logging.info(f"Time is now seconds = {str(curr_time_seconds)}")
+        sm.logger.info(f"Time is now seconds = {str(curr_time_seconds)}")
 
     def update(self, sm):
-        logging.info("Running PERFORM update func")
+        sm.logger.info("Running PERFORM update func")
         # always transition to ITERATE state
         sm.state = ITERATE()
 
@@ -250,7 +250,7 @@ class SLEEP(State):
         self.available_sleep_time = 0
 
     def process(self, sm):
-        logging.info("Running SLEEP process func")
+        sm.logger.info("Running SLEEP process func")
 
         seconds_in_day = 86400
 
@@ -263,22 +263,22 @@ class SLEEP(State):
 
         nearest_ens_time = sm.ens_list[sm.ens_index]["start_time"]
 
-        logging.info("Inside SLEEP process, "  + \
+        sm.logger.info("Inside SLEEP process, "  + \
                     f"with next ensemble: {str(nearest_ens_time)} " + \
                     f"and current time: {str(curr_time_seconds)}")
 
         if nearest_ens_time < curr_time_seconds:
-            logging.info("Last ensemble finished, index reset; " + \
+            sm.logger.info("Last ensemble finished, index reset; " + \
                             "next ens is on next day")
             time_left_today = seconds_in_day - curr_time_seconds
             self.available_sleep_time = time_left_today + nearest_ens_time
         else:
-            logging.info("Current time less than next ens; " + \
+            sm.logger.info("Current time less than next ens; " + \
                             "next ens is on same day")
             self.available_sleep_time = nearest_ens_time - curr_time_seconds
 
     def update(self, sm):
-        logging.info("Running SLEEP update func")
+        sm.logger.info("Running SLEEP update func")
 
         # if enough time call shutdown, or
         # transfer to SHUTDOWN state if we want one just to call shutdown func
@@ -292,14 +292,14 @@ class SLEEP(State):
 
                 to_sleep = self.available_sleep_time - \
                         (sm.wakeup_time + sm.shutdown_time)
-                logging.info(f"calling sleep timer's sleep({to_sleep})")
+                sm.logger.info(f"calling sleep timer's sleep({to_sleep})")
                 sm.sleep_timer.sleep(to_sleep)
                 time.sleep(1)
 
             else:
                 # Python sleep with full time, sleep timer is offline
                 # proceed to ERROR to report sleep timer problem
-                logging.info("Calling Python's time.sleep for " + \
+                sm.logger.info("Calling Python's time.sleep for " + \
                                 f"{str(self.available_sleep_time)} seconds")
                 time.sleep(self.available_sleep_time)
                 sm.err_code = TIMER_OFFLINE
@@ -307,10 +307,10 @@ class SLEEP(State):
 
         else:
             # if not enough time, call Python sleep
-            logging.info("Calling Python's time.sleep for " + \
+            sm.logger.info("Calling Python's time.sleep for " + \
                             f"{str(self.available_sleep_time)} seconds")
             time.sleep(self.available_sleep_time)
-            logging.info(f"Changing state to CHECK_TIME")
+            sm.logger.info(f"Changing state to CHECK_TIME")
             sm.state = CHECK_TIME()
 
 class ERROR(State):
@@ -326,25 +326,25 @@ class ERROR(State):
             "Hardware timer unresponsive. Defaulting to software sleep.\n"] # 3
 
     def process(self, sm):
-        logging.info(f"Running ERROR process func")
+        sm.logger.info(f"Running ERROR process func")
 
         now = time.localtime()
         curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
 
         if sm.err_code == NO_ENS_FILE:
-            logging.error(self.err_msgs[NO_ENS_FILE])
+            sm.logger.error(self.err_msgs[NO_ENS_FILE])
         elif sm.err_code == MISSED_ENS:
-            logging.info("Missed ensemble: " + \
+            sm.logger.info("Missed ensemble: " + \
                             f"{sm.ens_list[sm.ens_index]['title']}")
-            logging.info(f"Current time: {str(curr_time_seconds)}")
-            logging.info("Ensemble target time: " + \
+            sm.logger.info(f"Current time: {str(curr_time_seconds)}")
+            sm.logger.info("Ensemble target time: " + \
                             f"{str(sm.ens_list[sm.ens_index]['start_time'])}")
-            logging.error(self.err_msgs[MISSED_ENS])
+            sm.logger.error(self.err_msgs[MISSED_ENS])
         elif sm.err_code == TIMER_OFFLINE:
-            logging.error(self.err_msgs[TIMER_OFFLINE])
+            sm.logger.error(self.err_msgs[TIMER_OFFLINE])
 
     def update(self, sm):
-        logging.info(f"Running ERROR update func")
+        sm.logger.info(f"Running ERROR update func")
 
         if sm.err_code == NO_ENS_FILE:
             sys.exit()
@@ -361,16 +361,17 @@ class StateMachine:
     from multiple states and runs an infinte loop of process and update
     '''
 
-    def __init__(self):
+    def __init__(self, filename: str = "active_ensembles.json"):
         self.day_of_ens = 0
         self.err_code = NO_ERR
-        self.ens_filename = "active_ensembles.json"
+        self.ens_filename = filename
         self.ens = ""
         self.ens_index = 0
         self.ens_list = ""
         self.rst = False
         self.state = WAKE_UP()
 
+        self.logger = self.get_logger()
         self.__sleep_timer = None
         self.__wakeup_time = 5
         self.__shutdown_time = 5
@@ -398,18 +399,29 @@ class StateMachine:
     @wakeup_time.setter
     def wakeup_time(self, sec: int):
         if (sec < self.__wakeup_time):
-            logging.info("new wakeup time is less than previous!")
+            sm.logger.info("new wakeup time is less than previous!")
         self.__wakeup_time = sec
 
-    @porperty
+    @property
     def shutdown_time(self):
         return self.__shutdown_time
 
     @shutdown_time.setter
     def shutdown_time(self, sec: int):
         if (sec < self.__shutdown_time):
-            logging.info("new shutdown time is less than previous!")
+            sm.logger.info("new shutdown time is less than previous!")
         self.__shutdown_time = sec
+
+    def get_logger(self):
+        # TODO: allow easier configuration of logger via config file
+        logger = logging.getLogger("sleep_scheduler")
+        logger.setLevel(sm.logger.DEBUG)
+        handler = logging.StreamHandler(sys.stdout)
+        handler.setLevel(sm.logger.INFO)
+        formatter = logging.Formatter('%(levelname)s: %(name)s: %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        return logger
 
 if __name__ == "__main__":
     control_flow = StateMachine()
