@@ -3,22 +3,21 @@ Sleep period scheduler for Radio Telemetry's tower deployments
 
 ## Problem
 Given:
--	File ensembles.json containing functions to perform at scheduled times, specifications below, read:
-  -	Set S of functions to perform now
-  -	Time tn+1 at which we need to perform next set of communications from ensembles.json
+-	File `ensembles.json` containing functions to perform at scheduled times, specifications below, read:
+  -	Function ensemble number n to perform now
+  -	Time t<sub>n+1</sub> at which we need to perform next set of communications from `ensembles.json`
 
 Constants:
--	Time tshutdown needed to go into sleep
--	Time twake needed to wake from sleep
-These will need to be determined later, can use nonsense constants while building
+-	Time t<sub>shutdown</sub> needed to go into sleep
+-	Time t<sub>wake</sub> needed to wake from sleep
 
-Need to find (and communicate to sleep timer):
--	Time tsleep between going to sleep and being woken up
+Need to find and communicate to sleep timer:
+-	Time t<sub>sleep</sub> between going to sleep and being woken up
 
-Perform S, then get current time tn.
-Find tsleep as tn+1 - tn – tshutdown – twake, and communicate this to sleep timer.
-Assume some sleep(float time) function which tells the sleep timer to put given tower to sleep for time s.
-Remember to save variable indicating next set of communications to disk, since local memory will be wiped once tower goes to sleep.
+Perform ensemble n, then get current time t<sub>n</sub>.
+Find t<sub>sleep</sub> as t<sub>n+1</sub> - t<sub>n</sub> – t<sub>shutdown</sub> – t<sub>wake</sub>, and communicate this to sleep timer.
+Assume some `sleep(float sec)` function which tells the sleep timer to put given tower to sleep for sec seconds.
+Remember to save variable indicating next ensemble to disk, since local memory will be wiped once tower goes to sleep.
 
 ## Input
 
@@ -28,36 +27,56 @@ Functions to perform should be stored in the following json format:
 {
   "ensemble_list": [
     {
-      "title": "example1",
-      "function": somefunc,
-      "inputs": [],
-      "start_time": {
-          "hour": 12,
-          "minute": 0,
-          "second": 0
-      },
-      "iterations": 5,
-      "interval": 60
-    },
-    {
-      "title": "example2",
-      "function": somefunc,
-      "inputs": [],
-      "start_time": {
-          "hour": 12,
-          "minute": 0,
-          "second": 0
-      },
-      "iterations": 5,
-      "interval": 60
-    }
+            "title": "print",
+            "function": "path_to_module.module:print_function",
+            "inputs": [
+                "Hello World!"
+            ],
+            "start_time": {
+                "hour": 8,
+                "minute": 0,
+                "second": 30
+            },
+            "iterations": 5,
+            "interval": 60
+        },
+        {
+            "title": "add",
+            "function": "path_to_module.module:addition_function",
+            "inputs": [
+                1,
+                2
+            ],
+            "start_time": {
+                "hour": 12,
+                "minute": 0,
+                "second": 0
+            },
+            "iterations": 5,
+            "interval": 60
+        },
+        {
+            "title": "subtract",
+            "function": "path_to_module.module:subtraction_function",
+            "inputs": [
+                1,
+                2
+            ],
+            "start_time": {
+                "hour": 12,
+                "minute": 0,
+                "second": 0
+            },
+            "iterations": 5,
+            "interval": 60
+        }
     ...etc...
   ]
 }
 ```
 With each item being of the correct type:
-- function: Callable
-- inputs: list of arguments which the user must confirm matches the correct number and types of args to the given function
+- function: period-delimited path to a callable function followed by function name, separated by a colon
+- inputs: list of primitive-type arguments to the given function, which the user must confirm are the correct type
 - starting time:
   - hour: hour at which to start [0, 23]
   - minute: minute at which to start [0, 59]
@@ -76,7 +95,7 @@ Use it like this:
 python convertToActive.py input_file.json
 ```
 
-The script uses input file `ensembles.json` by default and always outputs
+The script uses input file `dummy_ensembles.json` by default and always outputs
 to `active_ensembles.json`. Be careful since it will overwrite a previous
 active ensembles file.
 
@@ -94,7 +113,7 @@ python scheduler.py
 
 ## Outline
 1.	Fetch current ensemble (what should be performed) from disk
-2.	Read current ensemble from file: functions to perform and time to perform them
+2.	Read current ensemble from file: function to perform and time to perform it
 3.  Confirm it's time to execute this ensemble
 4.	Let tower perform functions in current ensemble
 5.	Perform calculations to find sleep duration given current time, time at which to perform next ensemble, and wakeup and shutdown times
@@ -105,7 +124,7 @@ python scheduler.py
 ![State machine diagram.](state_machine.png "This is our state machine.")
 
 ## To-Do Items
-- [ ] Execution of ensemble functions
+- [x] Execution of ensemble functions
 - [ ] Sleep timer tester (make a subclass of SleepTimer once interface is complete)
 - [ ] Determine time needed for shutdown and wakeup
 - [ ] Unit testing of component functions

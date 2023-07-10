@@ -1,49 +1,25 @@
 #!/usr/bin/python3
 
 import datetime
+import importlib.util
 import json
+import logging
+import sys
 import time
 
-TIME_SHUTDOWN = 5 # find real shutdon and wakeup times later
-TIME_WAKEUP = 5
+# variables for selecting path in CHECK_TIME state
+SKIP = 0
+RUN = 1
+WAIT = 2
+RESET = 3
 
-def teardown():
-    '''
-    Find how long until the first ensemble of the next day
-    Uses slightly different logic than the normal next time
-    calculation since we're going to the next day
-    '''
+# variables for handling and recovering in ERROR state
+NO_ERR = 0
+NO_ENS_FILE = 1
+MISSED_ENS = 2
+TIMER_OFFLINE = 3
 
-    seconds_in_day = 86400
-
-    filename = "active_ensembles.json"
-    with open(filename, "r", encoding="utf-8") as f_in:
-        ens = json.load(f_in)
-
-    f_in.close()
-    first_ensemble_start = ens["ensemble_list"][0]["start_time"]
-
-
-    ens["next_ensemble"] = 0 # back to first ensemble
-    with open(filename, "w", encoding="utf-8") as f_out:
-        json.dump(ens, f_out, indent=4)
-
-    f_out.close()
-
-
-    now = time.localtime()
-    curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
-
-    print("time now: " + str(curr_time_seconds))
-    print("target time: " + str(first_ensemble_start))
-
-    time_left_today = seconds_in_day - curr_time_seconds
-    time_to_sleep = time_left_today + first_ensemble_start
-    print("calling sleep timer for " + str(time_to_sleep) + " seconds")
-    # call sleep timer here
-
-
-def hmsToSeconds(hour: int, min: int, sec: int):
+def hms_to_seconds(hour: int, min: int, sec: int):
     '''
     Convert hours, minutes, and seconds to just seconds
 
@@ -56,167 +32,385 @@ def hmsToSeconds(hour: int, min: int, sec: int):
 
     return sec + min * 60 + hour * 3600
 
-
-def setup(filename: str = "dummy_ensembles.json"):
+class State:
     '''
-    Function to set up active_ensembles.json for the day by ordering all
-    iterations of all ensembles into execuntion order by time.
-
-    @param filename: specifies file with ensemble specifications
+    Although each state is divided into process and update, they aren't
+    always perfectly decoupled. Sometimes the update functioning has to
+    do a bit of processing to make its determination. The example of that
+    would be the SLEEP state which calls into sleep then picks a new state.
     '''
 
-    f = open(filename)
-    ensembles = json.load(f)
-    ens = ensembles["ensemble_list"] # shortcut for orig file
-    f.close()
+    def process(self, sm):
+        '''
+        The process function for each state does what the state is meant to
+        accomplish. To be overwritten in each state.
+        '''
 
-    # Get every ensemble and create a new dict for each iteration
-    all_ensembles = []
-    for i in range(len(ens)):
-        i_hour   = ens[i]["start_time"]["hour"]
-        i_minute = ens[i]["start_time"]["minute"]
-        i_second = ens[i]["start_time"]["second"]
-        tot_time = hmsToSeconds(i_hour, i_minute, i_second)
-        for j in range(ens[i]["iterations"] + 1):
-            iter_seconds = ens[i]["interval"]
-            func_event = {}
-            func_event["title"] = ens[i]["title"] + "-" + str(j)
-            func_event["function"] = ens[i]["function"]
-            func_event["time"] = tot_time + iter_seconds * j
-            all_ensembles.append(func_event)
-
-    # TODO: figure out when and how much we want to tear down
-	# teardown sets setup as next func then sleeps for 1-2 mins
-    teardown = {}
-    teardown["title"] = "teardown"
-    teardown["function"] = "teardown"
-    teardown["time"] = 86399 # one min before midnight
-    all_ensembles.append(teardown)
-
-	# sort all of the enumerated ensembles by time
-    for i in range(len(all_ensembles)):
-        for j in range(i + 1, len(all_ensembles)):
-            if (all_ensembles[j]["time"] < all_ensembles[i]["time"]):
-                tmp = all_ensembles[i]
-                all_ensembles[i] = all_ensembles[j]
-                all_ensembles[j] = tmp
-
-    full_json = {"next_ensemble": 0, "ensemble_list": all_ensembles}
-    ensemble_ofile = open("active_ensembles.json", 'w')
-    json.dump(full_json, ensemble_ofile)
-    ensemble_ofile.close()
+    def update(self, sm):
+        '''
+        The update function for each state selects the state to transition to.
+        To be overwritten in each state.
+        '''
 
 
-def someFunc():
-    ''''
-    simple printing function for use in testing
+class WAKE_UP(State):
     '''
-    print("someFunc called!")
-
-def check_ensemble_should_sleep(nearest_ens_time: int, curr_time_seconds: int):
+    The WAKE_UP state is always the first state to run.
+    It makes sure we actually have a file we can run and
+    then passes control to CHECK_TIME.
     '''
-    Given the time of execution of an ensemble, determine whether we have enough
-    time for the tower to go into sleep before it will need to wake up again.
 
-    @precondition assumes that nearest_ens_time > curr_time_seconds 
-    @param nearest_ens_time: time (in seconds) of next ensemble's execution
-    @param curr_time_seconds: current time (in seconds)
-    @return should_sleep: True if tower has enough time to go into sleep and
-                wake up again before next ensemble, else false
-            available_sleep_time: seconds for which tower may sleep
-    '''
-    available_sleep_time = nearest_ens_time - curr_time_seconds - \
-        TIME_WAKEUP - TIME_SHUTDOWN
+    def process(self, sm):
+        logging.info("Running WAKE_UP process func")
 
-    '''
-    TODO: check if sleep timer is responsive
-    if not, do time.sleep instead of calling sleep time
-    '''
-    # responsive = sleepTimer.checkResponsive()
+        # read active ensembles file
+        try:
+            with open(sm.ens_filename, "r", encoding="utf-8") as f_in:
+                sm.ens = json.load(f_in)
 
-    # not enough time to go into sleep and wake up again before next ensemble
-    if available_sleep_time <= 0:
-        sleep_time = nearest_ens_time - curr_time_seconds
-        # time.sleep(sleep_time) # Wait using Python sleep function
-        print(f"Temporary print replace sleep: time.sleep({str(sleep_time)})")
-        # Do not need to sleep any longer
-        return (False, 0)
-    else:
-        # if (responsive)
-        # Need to send sleep command to sleep timer
-        return (True, available_sleep_time)
-        # else:
-        # time.sleep(sleep_time) # Wait using Python sleep function
-        # Do not need to sleep any longer
-        # return (False, 0)
+            sm.ens_index = sm.ens["next_ensemble"]
+            sm.ens_list = sm.ens["ensemble_list"]
+        except:
+            sm.err_code = NO_ENS_FILE
 
-def main():
-    filename = "active_ensembles.json"
-
-    try:
-        f = open(filename)
-        ensembles = json.load(f)
-        f.close()
-        next_ensemble = ensembles["next_ensemble"]
-        ens = ensembles["ensemble_list"]
-    except:
-        next_ensemble = 0
-        setup()
-
-    f = open(filename)
-    ensembles = json.load(f)
-    f.close()
-
-    ens = ensembles["ensemble_list"] # shortcut for active
-
-    '''
-    Checks if next_ensemble is already past current time
-     If so, skips the ensemble
-     If not,
-    If there's time to sleep, print very last statement about sleepTimer.sleepIf not enough time to sleep, time.sleep(sec)
-    '''
-    while (True):
-        next_ensemble = ensembles["next_ensemble"]
-        if (next_ensemble >= len(ens)):
-            break
-
-        nearest_ens_time = ens[next_ensemble]["time"]
-        # Get current time
         now = time.localtime()
-        print("now in seconds: " + str(curr_time_seconds))
-        print("next ensemble time in seconds: " + str(nearest_ens_time))
-        curr_time_seconds = hmsToSeconds(now.tm_hour, now.tm_min, now.tm_sec)
-        # Missed next ensemble time
-        if (nearest_ens_time < curr_time_seconds):
-            # Skip ensemble
-            ensembles["next_ensemble"] += 1
-            continue
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
 
-        should_sleep, sleep_time = check_ensemble_should_sleep(nearest_ens_time, curr_time_seconds)
+        logging.info(f"Waking up at seconds = {str(curr_time_seconds)}")
 
-        if (should_sleep):
-            # someRefToSleepTimer.sleep(sleep_time)
-            print(f"Temporary print replacing sleep: sleepTimer.sleep({str(sleep_time)})")
+    def update(self, sm):
+        logging.info("Running WAKE_UP update func")
+        # if active ensembles file not found or other reading with error,
+        # transition to ERROR state
+        if sm.err_code != NO_ERR:
+            sm.state = ERROR()
         else:
-            '''
-            TODO: Wesley
+            # otherwise always
+            # transition to CHECK_TIME state
+            sm.state = CHECK_TIME()
 
-            ensemble = active_ensembles["ensemble_list"][next_ensemble]
+class CHECK_TIME(State):
+    '''
+    CHECK_TIME determines if the machine should skip an ensemble,
+    run an ensemble, or sleep until the next ensemble.
+    '''
 
-            # perform ensemble functions
-            for (auto f : ensemble)
-            	std::invoke(f, inputs) # Wesley
-            	# TODO: allow for function arguments via e["inputs"]
-        		# should just be comma-separated list of inputs
-            next_ensemble += 1
-            '''
+    def __init__(self):
+        self.check_time_ctrl = SKIP
 
-            ensembles["next_ensemble"] += 1
+    def process(self, sm):
+        logging.info("Running CHECK_TIME process func")
+        logging.info(f"Current ens index = {str(sm.ens_index)}")
 
-            #ensemble_ofile = open(filename, "w")
-            #json.dump(full_json, ensemble_ofile)
-            #ensemble_ofile.close()
+        # this is a small window where if the scheduler wakes up
+        # slightly early from sleep we allow it to run the ensemble anyway
+        TIME_BUFFER = 5
 
+        if sm.ens_index < len(sm.ens_list):
+            # read time from ensemble and compare to current_time
+            now = time.localtime()
+            curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min,
+                                                now.tm_sec)
 
-if __name__ == '__main__':
-    main()
+            nearest_ens_time = sm.ens_list[sm.ens_index]["start_time"]
+
+            if nearest_ens_time < curr_time_seconds:
+                logging.info("Time is past current ens, checking for skip")
+                if sm.rst == True:
+                    if now.tm_wday == sm.day_of_ens:
+                        self.check_time_ctrl = WAIT
+                    else:
+                        self.check_time_ctrl = SKIP
+                        sm.err_code = MISSED_ENS
+                else:
+                    self.check_time_ctrl = SKIP
+                    sm.err_code = MISSED_ENS
+            elif nearest_ens_time <= curr_time_seconds + TIME_BUFFER:
+                logging.info("Correct time for ensemble: " + \
+                                f"{sm.ens_list[sm.ens_index]['title']}")
+                self.check_time_ctrl = RUN
+            else:
+                logging.info(f"ensemble {sm.ens_list[sm.ens_index]['title']} " \
+                                + "is still in future, go to sleep")
+                self.check_time_ctrl = WAIT
+
+            sm.day_of_ens = now.tm_wday
+            sm.rst = False
+        else:
+            logging.info("Index beyond last ens, resetting")
+            self.check_time_ctrl = RESET
+            sm.ens_index = 0
+            sm.rst = True
+
+    def update(self, sm):
+        logging.info("Running CHECK_TIME update func")
+
+        # if current_time is passed current_ensemble time,
+        # transition to ITERATE
+        if self.check_time_ctrl == SKIP:
+            sm.state = ERROR()
+
+        # if current_time == current_ensemble time,
+        # transition to PERFORM_ENSEMBLE state
+        elif self.check_time_ctrl == RUN:
+            sm.state = PERFORM_ENSEMBLE()
+
+        # if current_time is less than current_ensemble time,
+        # transition to SLEEP state
+        elif self.check_time_ctrl == WAIT:
+            sm.state = SLEEP()
+
+        # if all ensembles are done, need to sleep til first one of next day
+        elif self.check_time_ctrl == RESET:
+            sm.state = CHECK_TIME()
+
+class ITERATE(State):
+    '''
+    ITERATE just increases the index by one then passes
+    back to CHECK_TIME
+    '''
+
+    def process(self, sm):
+        logging.info("Running ITERATE process func")
+
+        # increment the current_ensemble variable
+        sm.ens_index += 1
+
+    def update(self, sm):
+        logging.info("Running ITERATE update func")
+
+        # transition to CHECK_TIME state
+        sm.state = CHECK_TIME()
+
+class PERFORM_ENSEMBLE(State):
+    '''
+    PERFORM_ENSEMBLE runs the function associated with the current ensemble
+    and then passes to ITERATE
+    '''
+
+    def process(self, sm):
+        logging.info("Running PERFORM process func")
+
+        # run the function of the current ensemble
+        self.perform_ensemble_functions(sm.ens_index)
+
+        logging.info(f"Done performing {sm.ens_list[sm.ens_index]['title']}")
+
+        now = time.localtime()
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
+        logging.info(f"Time is now seconds = {str(curr_time_seconds)}")
+
+    def update(self, sm):
+        logging.info("Running PERFORM update func")
+        # always transition to ITERATE state
+        sm.state = ITERATE()
+
+    def perform_ensemble_functions(self, ensemble_index: int,
+                                    filename: str = "active_ensembles.json"):
+        '''
+        Function to call one ensembles from a json functions
+        It is required that the json has the following parameters provided:
+        title: "str"
+        function: "dir_str.dir_str:function_str"
+        inputs: [Any] it can also be empty
+        runs for non-member functions and static functions.
+        @param ensemble_index: index of the ensemble function being run
+        @param filename: specifies file with ensemble specifications
+        '''
+        with open(filename, encoding="utf-8") as user_file:
+            file_contents = json.load(user_file)
+
+        curr_ens = file_contents['ensemble_list'][ensemble_index]
+        function = curr_ens["function"].split(":")
+        function_path = function[0].split(".")
+        function_inputs = curr_ens["inputs"]
+        module_dir = '/'.join(function_path) + ".py"
+        module_name = function_path[-1] # module name comes before the function
+        function_name = function[-1]
+
+        # Load module
+        spec = importlib.util.spec_from_file_location(module_name, module_dir)
+        module = importlib.util.module_from_spec(spec)
+
+        spec.loader.exec_module(module)
+        class_function = getattr(module, function_name)
+
+        class_function(*function_inputs)
+
+class SLEEP(State):
+    '''
+    SLEEP calculates how much time is available to sleep once
+    the need for sleep is confirmed. A hardware sleep will
+    make the machine reset and wake up in WAKE_UP. A software
+    sleep leads to CHECK_TIME.
+    '''
+
+    def __init__(self):
+        self.sleep_timer_responsive = False
+        self.available_sleep_time = 0
+
+    def process(self, sm):
+        logging.info("Running SLEEP process func")
+
+        seconds_in_day = 86400
+
+        # TODO: check if sleep timer is online or not
+        # sleep_timer_responsive = sleepTimer.checkResponsive()
+
+        # recalc current_time vs (current_ensemble time + wakeup + shutdown)
+        now = time.localtime()
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
+
+        nearest_ens_time = sm.ens_list[sm.ens_index]["start_time"]
+
+        logging.info("Inside SLEEP process, "  + \
+                    f"with next ensemble: {str(nearest_ens_time)} " + \
+                    f"and current time: {str(curr_time_seconds)}")
+
+        if nearest_ens_time < curr_time_seconds:
+            logging.info("Last ensemble finished, index reset; " + \
+                            "next ens is on next day")
+            time_left_today = seconds_in_day - curr_time_seconds
+            self.available_sleep_time = time_left_today + nearest_ens_time
+        else:
+            logging.info("Current time less than next ens; " + \
+                            "next ens is on same day")
+            self.available_sleep_time = nearest_ens_time - curr_time_seconds
+
+    def update(self, sm):
+        logging.info("Running SLEEP update func")
+
+        # if enough time call shutdown, or
+        # transfer to SHUTDOWN state if we want one just to call shutdown func
+        if self.available_sleep_time > sm.wakeup_time + sm.shutdown_time:
+            if self.sleep_timer_responsive == True:
+                # write curr index to ens file then sleep
+                sm.ens["next_ensemble"] = sm.ens_index
+
+                with open(sm.ens_filename, "w", encoding="utf-8") as f_out:
+                    json.dump(sm.ens, f_out, indent=4)
+
+                to_sleep = self.available_sleep_time - \
+                        (sm.wakeup_time + sm.shutdown_time)
+                logging.info(f"calling sleep timer's sleep({to_sleep})")
+                sm.sleep_timer.sleep(to_sleep)
+                time.sleep(1)
+
+            else:
+                # Python sleep with full time, sleep timer is offline
+                # proceed to ERROR to report sleep timer problem
+                logging.info("Calling Python's time.sleep for " + \
+                                f"{str(self.available_sleep_time)} seconds")
+                time.sleep(self.available_sleep_time)
+                sm.err_code = TIMER_OFFLINE
+                sm.state = ERROR()
+
+        else:
+            # if not enough time, call Python sleep
+            logging.info("Calling Python's time.sleep for " + \
+                            f"{str(self.available_sleep_time)} seconds")
+            time.sleep(self.available_sleep_time)
+            logging.info(f"Changing state to CHECK_TIME")
+            sm.state = CHECK_TIME()
+
+class ERROR(State):
+    '''
+    ERROR reports errors and then sends the control back where
+    it belongs, usually to ITERATE
+    '''
+
+    def __init__(self):
+        self.err_msgs = ["No error recorded\n",                             # 0
+            "No active_ensembles.json file found. Unable to continue.\n",   # 1
+            "Skipping past missed ensemble.\n",                             # 2
+            "Hardware timer unresponsive. Defaulting to software sleep.\n"] # 3
+
+    def process(self, sm):
+        logging.info(f"Running ERROR process func")
+
+        now = time.localtime()
+        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
+
+        if sm.err_code == NO_ENS_FILE:
+            logging.error(self.err_msgs[NO_ENS_FILE])
+        elif sm.err_code == MISSED_ENS:
+            logging.info("Missed ensemble: " + \
+                            f"{sm.ens_list[sm.ens_index]['title']}")
+            logging.info(f"Current time: {str(curr_time_seconds)}")
+            logging.info("Ensemble target time: " + \
+                            f"{str(sm.ens_list[sm.ens_index]['start_time'])}")
+            logging.error(self.err_msgs[MISSED_ENS])
+        elif sm.err_code == TIMER_OFFLINE:
+            logging.error(self.err_msgs[TIMER_OFFLINE])
+
+    def update(self, sm):
+        logging.info(f"Running ERROR update func")
+
+        if sm.err_code == NO_ENS_FILE:
+            sys.exit()
+        elif sm.err_code == MISSED_ENS:
+            sm.state = ITERATE()
+        elif sm.err_code == TIMER_OFFLINE:
+            # SLEEP state handles software sleep, so ERROR just logs then
+            # passes back to CHECK_TIME
+            sm.state = CHECK_TIME()
+
+class StateMachine:
+    '''
+    The StateMachine class holds the data that needs to be accessed
+    from multiple states and runs an infinte loop of process and update
+    '''
+
+    def __init__(self):
+        self.day_of_ens = 0
+        self.err_code = NO_ERR
+        self.ens_filename = "active_ensembles.json"
+        self.ens = ""
+        self.ens_index = 0
+        self.ens_list = ""
+        self.rst = False
+        self.state = WAKE_UP()
+
+        self.__sleep_timer = None
+        self.__wakeup_time = 5
+        self.__shutdown_time = 5
+
+    def run_machine(self):
+        while True:
+            self.state.process(self)
+            self.state.update(self)
+
+    @property
+    def sleep_timer(self):
+        return self.__sleep_timer
+
+    @sleep_timer.setter
+    def sleep_timer(self, sleep_timer):
+        '''
+        Set this state machine's sleep timer reference
+        '''
+        self.__sleep_timer = sleep_timer
+
+    @property
+    def wakeup_time(self):
+        return self.__wakeup_time
+
+    @wakeup_time.setter
+    def wakeup_time(self, sec: int):
+        if (sec < self.__wakeup_time):
+            logging.info("new wakeup time is less than previous!")
+        self.__wakeup_time = sec
+
+    @porperty
+    def shutdown_time(self):
+        return self.__shutdown_time
+
+    @shutdown_time.setter
+    def shutdown_time(self, sec: int):
+        if (sec < self.__shutdown_time):
+            logging.info("new shutdown time is less than previous!")
+        self.__shutdown_time = sec
+
+if __name__ == "__main__":
+    control_flow = StateMachine()
+    control_flow.run_machine()

@@ -8,7 +8,7 @@ import signal
 import sys
 import time
 
-from state_machine_design import StateMachine
+from scheduler import StateMachine
 
 class SleepTimerTester:
     '''
@@ -55,7 +55,7 @@ def main():
     logger.addHandler(handler)
 
     sleep_timer = SleepTimerTester()
-    
+
     sleeptime_memory = shared_memory.SharedMemory(create=True, size=4)
     sleep_timer.set_sleeptime_memory(sleeptime_memory)
 
@@ -79,9 +79,9 @@ def main():
             if new_pid == 0:
                 # run scheduler.py
                 scheduler = StateMachine()
-                scheduler.set_sleep_timer(sleep_timer)
-                scheduler.set_wakeup(wakeup)
-                scheduler.set_shutdown(shutdown)
+                scheduler.sleep_timer = sleep_timer
+                scheduler.wakeup_time = wakeup
+                scheduler.shutdown_time = shutdown
 
                 endtime = time.time()
                 wakeup = max(math.ceil(endtime - starttime + BUFFER_TIME), wakeup)
