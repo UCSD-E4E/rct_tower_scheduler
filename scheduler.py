@@ -413,7 +413,7 @@ class StateMachine:
         self.__shutdown_time = sec
 
     def get_logger(self):
-        # TODO: allow configuration of logger via config file
+        # TODO: allow easier configuration of logger via config file
         logger = logging.getLogger("sleep_scheduler")
         logger.setLevel(logging.DEBUG)
         handler = logging.StreamHandler(sys.stdout)
