@@ -2,11 +2,11 @@
   "ensemble_list": [
     {
       "title": "zeta1",
-      "function": "someFunc",
+      "function": "ensemble_tests.tester_functions:hello_world",
       "inputs": [],
       "start_time": {
-          "hour": 8,
-          "minute": 0,
+          "hour": 12,
+          "minute": 40,
           "second": 15
       },
       "iterations": 5,
@@ -14,11 +14,11 @@
     },
     {
       "title": "zeta2",
-      "function": "someFunc",
-      "inputs": [],
+      "function": "ensemble_tests.tester_functions:add_this",
+      "inputs": [1, 2],
       "start_time": {
-          "hour": 8,
-          "minute": 0,
+          "hour": 12,
+          "minute": 50,
           "second": 30
       },
       "iterations": 5,
@@ -26,11 +26,11 @@
     },
     {
       "title": "dummy1",
-      "function": "someFunc",
-      "inputs": [],
+      "function": "ensemble_tests.tester_functions:subtract_this",
+      "inputs": [10, 4],
       "start_time": {
           "hour": 12,
-          "minute": 0,
+          "minute": 30,
           "second": 0
       },
       "iterations": 5,
@@ -38,11 +38,11 @@
     },
     {
       "title": "alpha1",
-      "function": "someFunc",
-      "inputs": [],
+      "function": "ensemble_tests.tester_functions:multiply_this",
+      "inputs": [8, 4],
       "start_time": {
           "hour": 12,
-          "minute": 0,
+          "minute": 45,
           "second": 0
       },
       "iterations": 5,
@@ -50,11 +50,11 @@
     },
     {
       "title": "dummy2",
-      "function": "someFunc",
-      "inputs": [],
+      "function": "ensemble_tests.tester_functions:print_this",
+      "inputs": ["printing in ens dummy2"],
       "start_time": {
-          "hour": 12,
-          "minute": 12,
+          "hour": 13,
+          "minute": 0,
           "second": 0
       },
       "iterations": 5,
