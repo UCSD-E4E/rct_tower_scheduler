@@ -7,6 +7,8 @@ import logging
 import sys
 import time
 
+# TODO: consider using enums for path and error constants
+
 # variables for selecting path in CHECK_TIME state
 SKIP = 0
 RUN = 1
@@ -423,6 +425,9 @@ class StateMachine:
         logger.addHandler(handler)
         return logger
 
-if __name__ == "__main__":
+def main():
     control_flow = StateMachine()
     control_flow.run_machine()
+
+if __name__ == "__main__":
+    main()

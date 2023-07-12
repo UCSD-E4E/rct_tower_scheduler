@@ -90,7 +90,7 @@ to program around. We provide the `convertToActive.py` to convert the
 initial format into the `active_ensembles.json` file that the scheduler
 can use.
 
-Use it like this:
+It can be found in the `TowerScheduler` directory. Use it like this:
 ```
 python convertToActive.py input_file.json
 ```
@@ -108,7 +108,6 @@ python scheduler.py
 
 ## Testing
 - `dummy_ensembles.json` is provided as an example initial file
-- the `active_ensembles.json` provided is the scheduler-usable form of `dummy_ensembles.json`
 - start the scheduler as above to run it
 
 ## Outline
@@ -122,13 +121,3 @@ python scheduler.py
 
 ## State Machine Diagram
 ![State machine diagram.](state_machine.png "This is our state machine.")
-
-## To-Do Items
-- [x] Execution of ensemble functions
-- [ ] Sleep timer tester (make a subclass of SleepTimer once interface is complete)
-- [ ] Determine time needed for shutdown and wakeup
-- [ ] Unit testing of component functions
-- [ ] System testing using fabricated schedules
-- [ ] Detect that sleep timer isn’t working (dependent on sleep timer interface)
-- [ ] Can’t connect to network --> save something locally, upload offline later (dependent on sleep timer interface)
-- [ ] Validate time synchronization between towers and GCS

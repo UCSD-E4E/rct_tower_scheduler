@@ -8,7 +8,7 @@ import signal
 import sys
 import time
 
-from scheduler import StateMachine
+from TowerScheduler.scheduler import StateMachine
 
 class SleepTimerTester:
     '''

@@ -9,7 +9,6 @@
 # This script always writes to "active_ensembles.json" and WILL overwrite
 # if a file of that name is in the same directory
 
-"""sys module for handling cli arg and json module for reading/writing json"""
 import sys
 import json
 
