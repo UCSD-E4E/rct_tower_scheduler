@@ -210,24 +210,24 @@ class PERFORM_ENSEMBLE(State):
     def perform_ensemble_functions(self, ensemble_index: int,
                                     filename: str = "active_ensembles.json"):
         '''
-        Function to call one ensembles from a json functions
+        Function to call one non-member or static function.
         It is required that the json has the following parameters provided:
         title: "str"
-        function: "dir_str.dir_str:function_str"
-        inputs: [Any] it can also be empty
-        runs for non-member functions and static functions.
+        function: "dir/module:function_str"
+        inputs: [Any]
         @param ensemble_index: index of the ensemble function being run
         @param filename: specifies file with ensemble specifications
         '''
-        with open(filename, encoding="utf-8") as user_file:
+        with open(filename, encoding="utf-8") as user_file: # TODO: don't reload
             file_contents = json.load(user_file)
 
         curr_ens = file_contents['ensemble_list'][ensemble_index]
         function = curr_ens["function"].split(":")
-        function_path = function[0].split(".")
         function_inputs = curr_ens["inputs"]
-        module_dir = '/'.join(function_path) + ".py"
-        module_name = function_path[-1] # module name comes before the function
+
+        module_dir = function[0] + ".py"
+        module_name = function[0].split("/")[-1]
+
         function_name = function[-1]
 
         # Load module
