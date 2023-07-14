@@ -381,7 +381,7 @@ class Error(State):
         self.logger.info("Running Error update func")
 
         if state_machine.err_code == ErrorCode.missed_ens:
-            state_machine.curr_state = Iterate()
+            state_machine.curr_state = state_machine.iterate_state
 
 class StateMachine:
     '''

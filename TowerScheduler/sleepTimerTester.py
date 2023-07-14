@@ -1,31 +1,48 @@
 #!/usr/bin/python3
 
+'''
+Module to facilitate testing the sleep timer scheduler found in scheduler.py.
+This includes a mock SleepTimer class and a main loop to fork a new process
+running our scheduler state machine, which the parent process will kill when
+the sleep function is called. Killing the child process and forking a new one
+will simulate shutting down the tower (and, with it, the scheduler), then waking
+it up for a new run at the appropriate time.
+
+This module should not be considered a testbench in itself but rather a tool to
+simulate an entire tower, controlled by a sleep timer to start execution of the
+scheduler and kill the scheduler's process when sleep() is called.
+'''
+
 import logging
 import math
-from multiprocessing import shared_memory
 import os
 import signal
 import sys
 import time
+from multiprocessing import shared_memory
 
 from TowerScheduler.scheduler import StateMachine
 
+
 class SleepTimerTester:
     '''
-    SleepTimer object specifically for testing. This should inherit from
-    SleepTimer once that package is completed. Scheduler can be run with any
-    SleepTimer object, which, in this case, is our tester.
+    SleepTimer object specifically for testing. This tester object's sleep
+    function may be passed in to initialize a StateMachine in scheduler.py.
     '''
     def __init__(self):
-        self.memory = None
-        self.starttime = 0
+        self.starttime_memory = None
+        self.sleeptime_memory = None
 
     def sleep(self, sec: int):
         '''
         Set this sleep timer's memory to store a number of seconds for which to
-        sleep. Memory must have already been set before calling this function.
+        sleep. Both shared memories must have already been set before calling
+        this function.
         @param sec: number of seconds to sleep
         '''
+        assert self.sleeptime_memory is not None
+        assert self.starttime_memory is not None
+
         self.sleeptime_memory.buf[:] = sec.to_bytes(4, "big")
         self.starttime_memory.buf[:] = int(time.time()).to_bytes(8, "big")
 
@@ -109,7 +126,7 @@ def main():
 
     except KeyboardInterrupt:
         if new_pid > 0:
-            print("")
+            print("") # nicer formatting when just printing to terminal
             logger.info("received interrupt from user, exiting now...")
             os.kill(new_pid, signal.SIGKILL)
             sleeptime_memory.close()
