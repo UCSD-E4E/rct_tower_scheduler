@@ -28,44 +28,11 @@ Functions to perform should be stored in the following json format:
   "ensemble_list": [
     {
             "title": "print",
-            "function": "path_to_module.module:print_function",
-            "inputs": [
-                "Hello World!"
-            ],
+            "function": "path_to_module.module:function_name",
             "start_time": {
                 "hour": 8,
                 "minute": 0,
                 "second": 30
-            },
-            "iterations": 5,
-            "interval": 60
-        },
-        {
-            "title": "add",
-            "function": "path_to_module.module:addition_function",
-            "inputs": [
-                1,
-                2
-            ],
-            "start_time": {
-                "hour": 12,
-                "minute": 0,
-                "second": 0
-            },
-            "iterations": 5,
-            "interval": 60
-        },
-        {
-            "title": "subtract",
-            "function": "path_to_module.module:subtraction_function",
-            "inputs": [
-                1,
-                2
-            ],
-            "start_time": {
-                "hour": 12,
-                "minute": 0,
-                "second": 0
             },
             "iterations": 5,
             "interval": 60
@@ -75,8 +42,7 @@ Functions to perform should be stored in the following json format:
 }
 ```
 With each item being of the correct type:
-- function: period-delimited path to a callable function followed by function name, separated by a colon
-- inputs: list of primitive-type arguments to the given function, which the user must confirm are the correct type
+- function: period-delimited path to a callable function followed by function name, separated by a colon; function cannot take arguments
 - starting time:
   - hour: hour at which to start [0, 23]
   - minute: minute at which to start [0, 59]

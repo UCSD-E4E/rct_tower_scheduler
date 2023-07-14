@@ -1,3 +1,12 @@
+'''
+Module to convert a json file of the specified schema (title, function, and
+timing) into a new json containing a current index and an ordered list of
+ensembles to execute. Each listed ensemble in the new active_ensembles.json will
+contain the title, module and function, inputs, and start time (in seconds,
+relative to 0=midnight), and they will be ordered according to increasing start
+time.
+'''
+
 import argparse
 import json
 import os
