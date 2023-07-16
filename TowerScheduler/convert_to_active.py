@@ -9,9 +9,10 @@ time.
 
 import argparse
 import json
-import os
 from pathlib import Path
+
 from schema import Regex, Schema
+from util import hms_to_seconds
 
 LAST_SEC_OF_DAY = 86399
 
@@ -33,17 +34,6 @@ ensemble_schema = Schema(
         ]
     }
 )
-
-def hms_to_seconds(hour: int, minute: int, sec: int) -> int:
-    """
-    Converts hours, mins, seconds to just seconds
-
-    @param hour: hour of timestamp to convert to seconds
-    @param minute: minute of timestamp to convert to seconds
-    @param sec: second of timestamp, to add to hour and minute conversions
-    @return
-    """
-    return sec + minute * 60 + hour * 3600
 
 def main(filein: Path):
     """
