@@ -12,10 +12,11 @@ setup(
         'console_scripts': [
             'scheduler = TowerScheduler.scheduler:main',
             'sleepTimerTester = TowerScheduler.sleepTimerTester:main'
+            # TODO: convertToActive entry point, but needs to take an arg
         ]
     },
     packages=find_packages(),
-    install_requires=[],
+    install_requires=[], # TODO
     extras_require={
         'dev': [
             'pytest',
