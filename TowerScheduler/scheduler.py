@@ -140,6 +140,7 @@ class CheckTime(State):
         # this is a small window where if the scheduler wakes up
         # slightly early from sleep we allow it to run the ensemble anyway
         time_buffer = 5 # TODO: allow configuration
+        self.err_code = ErrorCode.NO_ERR
 
         if state_machine.ens_index < len(state_machine.ens_list):
             # read time from ensemble and compare to current_time
