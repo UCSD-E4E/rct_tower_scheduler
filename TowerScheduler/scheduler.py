@@ -64,7 +64,14 @@ class State:
     would be the Sleep state which calls into sleep then picks a new state.
     '''
 
-    def process(self, state_machine):
+    @classmethod
+    def get_singleton(self) -> State:
+        '''
+        Return the singleton object for this state. If the singleton has not
+        been created yet, create one, set it as the singleton, and return it.
+        '''
+
+    def process(self, state_machine: StateMachine):
         '''
         The process function for each state does what the state is meant to
         accomplish. To be overwritten in each state.
@@ -72,7 +79,7 @@ class State:
         @param state_machine: the machine to which this state belongs
         '''
 
-    def update(self, state_machine):
+    def update(self, state_machine: StateMachine):
         '''
         The update function for each state selects the state to transition to.
         To be overwritten in each state.
@@ -86,9 +93,17 @@ class WakeUp(State):
     have a file we can run and then passes control to CheckTime.
     '''
 
+    singleton = None
+
     def __init__(self):
         self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Wake Up State")
+
+    @classmethod
+    def get_singleton(self):
+        if WakeUp.singleton is None:
+            WakeUp.singleton = WakeUp()
+        return WakeUp.singleton
 
     def process(self, state_machine):
         self.logger.info("Running WakeUp process func")
@@ -112,7 +127,7 @@ class WakeUp(State):
 
     def update(self, state_machine):
         self.logger.info("Running WakeUp update func")
-        state_machine.curr_state = state_machine.check_time_state
+        state_machine.curr_state = CheckTime.get_singleton()
 
 class CheckTime(State):
     '''
@@ -120,10 +135,18 @@ class CheckTime(State):
     run an ensemble, or sleep until the next ensemble.
     '''
 
+    singleton = None
+
     def __init__(self):
         self.check_time_ctrl = CheckTimePath.SKIP
         self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Check Time State")
+
+    @classmethod
+    def get_singleton(self):
+        if CheckTime.singleton is None:
+            CheckTime.singleton = CheckTime()
+        return CheckTime.singleton
 
     def process(self, state_machine):
         self.logger.info("Running CheckTime process func")
@@ -132,6 +155,7 @@ class CheckTime(State):
         # this is a small window where if the scheduler wakes up
         # slightly early from sleep we allow it to run the ensemble anyway
         time_buffer = 5 # TODO: allow configuration
+        self.err_code = ErrorCode.NO_ERR
 
         if state_machine.ens_index < len(state_machine.ens_list):
             # read time from ensemble and compare to current_time
@@ -179,21 +203,21 @@ class CheckTime(State):
         # transition to Iterate
         if self.check_time_ctrl == CheckTimePath.SKIP:
             state_machine.error_state.error_code = self.error_code # temporary while states still update each other
-            state_machine.curr_state = state_machine.error_state
+            state_machine.curr_state = Error.get_singleton()
 
         # if current_time == current_ensemble time,
         # transition to PerformEnsemble state
         elif self.check_time_ctrl == CheckTimePath.RUN:
-            state_machine.curr_state = state_machine.perform_ensemble_state
+            state_machine.curr_state = PerformEnsemble.get_singleton()
 
         # if current_time is less than current_ensemble time,
         # transition to SLEEP state
         elif self.check_time_ctrl == CheckTimePath.WAIT:
-            state_machine.curr_state = state_machine.sleep_state
+            state_machine.curr_state = Sleep.get_singleton()
 
         # if all ensembles are done, need to sleep til first one of next day
         elif self.check_time_ctrl == CheckTimePath.RESET:
-            state_machine.curr_state = state_machine.check_time_state
+            state_machine.curr_state = CheckTime.get_singleton()
 
 class Iterate(State):
     '''
@@ -201,9 +225,17 @@ class Iterate(State):
     back to CheckTime
     '''
 
+    singleton = None
+
     def __init__(self):
         self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Iterate State")
+
+    @classmethod
+    def get_singleton(self):
+        if Iterate.singleton is None:
+            Iterate.singleton = Iterate()
+        return Iterate.singleton
 
     def process(self, state_machine):
         self.logger.info("Running Iterate process func")
@@ -215,16 +247,25 @@ class Iterate(State):
         self.logger.info("Running Iterate update func")
 
         # transition to CheckTime state
-        state_machine.curr_state = state_machine.check_time_state
+        state_machine.curr_state = CheckTime.get_singleton()
 
 class PerformEnsemble(State):
     '''
     PerformEnsemble runs the function associated with the current ensemble
     and then passes to Iterate
     '''
+
+    singleton = None
+
     def __init__(self):
         self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Perform Ensemble State")
+
+    @classmethod
+    def get_singleton(self):
+        if PerformEnsemble.singleton is None:
+            PerformEnsemble.singleton = PerformEnsemble()
+        return PerformEnsemble.singleton
 
     def process(self, state_machine):
         self.logger.info("Running PERFORM process func")
@@ -242,7 +283,7 @@ class PerformEnsemble(State):
     def update(self, state_machine):
         self.logger.info("Running PERFORM update func")
         # always transition to Iterate state
-        state_machine.curr_state = state_machine.iterate_state
+        state_machine.curr_state = Iterate.get_singleton()
 
     def perform_ensemble_functions(self, ensemble_index: int,
                                     filename: str = "active_ensembles.json"):
@@ -283,10 +324,18 @@ class Sleep(State):
     sleep leads to CheckTime.
     '''
 
+    singleton = None
+
     def __init__(self):
         self.nearest_ens_time = 0
         self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Sleep State")
+
+    @classmethod
+    def get_singleton(self):
+        if Sleep.singleton is None:
+            Sleep.singleton = Sleep()
+        return Sleep.singleton
 
     def process(self, state_machine):
         self.logger.info("Running Sleep process func")
@@ -338,7 +387,7 @@ class Sleep(State):
                     available_sleep_time)
             time.sleep(available_sleep_time)
             self.logger.info("Changing state to CheckTime")
-            state_machine.curr_state = state_machine.check_time_state
+            state_machine.curr_state = CheckTime.get_singleton()
 
 class Error(State):
     '''
@@ -346,12 +395,20 @@ class Error(State):
     it belongs, usually to Iterate
     '''
 
+    singleton = None
+
     def __init__(self):
         self.err_msgs = ["No error recorded\n",                             # 0
             "Skipping past missed ensemble.\n"]                             # 1
 
         self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Error State")
+
+    @classmethod
+    def get_singleton(self):
+        if Error.singleton is None:
+            Error.singleton = Error()
+        return Error.singleton
 
     def process(self, state_machine):
         self.logger.info("Running Error process func")
@@ -371,7 +428,7 @@ class Error(State):
         self.logger.info("Running Error update func")
 
         if state_machine.err_code == ErrorCode.MISSED_ENS:
-            state_machine.curr_state = state_machine.iterate_state
+            state_machine.curr_state = Iterate.get_singleton()
 
 class StateMachine:
     '''
@@ -388,13 +445,7 @@ class StateMachine:
         self.ens_list = ""
         self.daily_reset = False
 
-        self.wake_up_state = WakeUp()
-        self.check_time_state = CheckTime()
-        self.iterate_state = Iterate()
-        self.perform_ensemble_state = PerformEnsemble()
-        self.sleep_state = Sleep()
-        self.error_state = Error()
-        self.curr_state = self.wake_up_state
+        self.curr_state = WakeUp.get_singleton()
 
         self.logger = get_logger("State Machine")
         self.__sleep_timer = None
