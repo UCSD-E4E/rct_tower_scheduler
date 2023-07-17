@@ -62,6 +62,7 @@ def main(filein: Path):
                     "start_time": timestamp + interval_sec * j }
             ens_list.append(curr_obj)
 
+    '''
     # create an extra object for teardown function
     teardown_obj = {
         "title": "teardown",
@@ -70,6 +71,7 @@ def main(filein: Path):
     }
 
     ens_list.append(teardown_obj)
+    '''
 
     # sort all the enumerated ensembles by time
     ens_list.sort(key=lambda ens:ens['start_time'])

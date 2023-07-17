@@ -37,7 +37,6 @@ class Ensemble:
 
         @param file: Path to the file containing active ensemble json
         @return List[Ensemble]: list of Ensembles defined by json
-        @return int: Index of next Ensemble to execute
 
         @throws FileNotFoundError if file argument is not a valid file
         @throws KeyError if file argument is improperly formatted
@@ -58,6 +57,15 @@ class Ensemble:
 
     @classmethod
     def list_to_json(cls, ens_list: list[Ensemble]) -> dict[str, list[dict[str, str]]]:
+        '''
+        Convert a list of Ensemble objects into a dict, so that it may be
+        written to a json file.
+
+        @param ens_list: list of Ensembles to convert
+        @return dict: mapping of ensemble_list data, such as that found in
+                active_ensembles.json
+        '''
+
         json_list = []
         for ens in ens_list:
             function = ens.module_dir[0:-3] + ":" + ens.function_name
@@ -94,8 +102,9 @@ class Ensemble:
         valid_start = self.start_time >= 0 and self.start_time < SECONDS_IN_DAY
 
         try:
-            spec_path = self.module_dir[0:-3].replace('/', '.')
-            module = importlib.util.find_spec(spec_path)
+            spec = importlib.util.spec_from_file_location(self.module_name,
+                                                        self.module_dir)
+            module = importlib.util.module_from_spec(spec)
         except ModuleNotFoundError:
             return False
 
@@ -107,8 +116,8 @@ class Ensemble:
                 return False
 
             args = inspect.getfullargspec(func).args
-            func_takes_args = args == []
+            func_takes_no_args = args == []
         else:
             return False
 
-        return valid_start and not func_takes_args
+        return valid_start and func_takes_no_args
