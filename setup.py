@@ -10,12 +10,13 @@ setup(
     author_email='e4e@eng.ucsd.edu',
     entry_points={
         'console_scripts': [
-            'scheduler = TowerScheduler.scheduler:main',
+            'scheduler = TowerScheduler.scheduler:main', # TODO: takes an arg now
             'sleepTimerTester = TowerScheduler.sleepTimerTester:main'
+            # TODO: convertToActive entry point, but needs to take an arg
         ]
     },
     packages=find_packages(),
-    install_requires=[],
+    install_requires=[], # TODO
     extras_require={
         'dev': [
             'pytest',

@@ -6,17 +6,18 @@ function, then executing its update function to proceed to the next state. The
 loop is ultimately broken when a call is made to a sleep timer's sleep function,
 at which point the sleep timer shuts down the machine running the state machine.
 '''
+from __future__ import annotations
 
-import importlib.util
+import argparse
 import json
 import logging
 import sys
 import time
 from enum import Enum
+from pathlib import Path
 
-from util import hms_to_seconds
-
-SECONDS_IN_DAY = 86400
+from ensemble import Ensemble
+from util import hms_to_seconds, SECONDS_IN_DAY
 
 class CheckTimePath(Enum):
     '''
@@ -32,18 +33,6 @@ class CheckTimePath(Enum):
     RUN = 1
     WAIT = 2
     RESET = 3
-
-class ErrorCode(Enum):
-    # TODO: error state unnecessary at this point, just fold missed_ens into Check Time state
-    '''
-    Types of errors, for use in handling and recovering in Error state
-
-    no_err: No error to report
-    missed_ens: Time for an ensemble was missed, report that this ensemble
-            wasn't performed
-    '''
-    NO_ERR = 0
-    MISSED_ENS = 1
 
 def get_logger(name: str, level: int=logging.INFO):
     logger = logging.getLogger(name)
@@ -64,7 +53,14 @@ class State:
     would be the Sleep state which calls into sleep then picks a new state.
     '''
 
-    def process(self, state_machine):
+    @classmethod
+    def get_singleton(cls) -> State:
+        '''
+        Return the singleton object for this state. If the singleton has not
+        been created yet, create one, set it as the singleton, and return it.
+        '''
+
+    def process(self, state_machine: StateMachine):
         '''
         The process function for each state does what the state is meant to
         accomplish. To be overwritten in each state.
@@ -72,7 +68,7 @@ class State:
         @param state_machine: the machine to which this state belongs
         '''
 
-    def update(self, state_machine):
+    def update(self, state_machine: StateMachine):
         '''
         The update function for each state selects the state to transition to.
         To be overwritten in each state.
@@ -86,24 +82,32 @@ class WakeUp(State):
     have a file we can run and then passes control to CheckTime.
     '''
 
+    singleton = None
+
     def __init__(self):
-        self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Wake Up State")
+
+    @classmethod
+    def get_singleton(cls):
+        if WakeUp.singleton is None:
+            WakeUp.singleton = WakeUp()
+        return WakeUp.singleton
 
     def process(self, state_machine):
         self.logger.info("Running WakeUp process func")
 
-        # read active ensembles file
-        try:
-            with open(state_machine.ens_filename, "r", encoding="utf-8") as f_in:
-                state_machine.ens = json.load(f_in)
+        with open("active_ensembles.json", "r", encoding="utf-8") as f_in:
+            ens_json = json.load(f_in)
 
-            state_machine.ens_index = state_machine.ens["next_ensemble"]
-            state_machine.ens_list = state_machine.ens["ensemble_list"]
-        except FileNotFoundError:
-            self.logger.exception("No active_ensembles.json file found." + \
-                            "Unable to continue.\n")
-            sys.exit()
+        state_machine.ens_index = ens_json["next_ensemble"]
+
+        # on first run of day, check that all ensembles are valid
+        if state_machine.ens_index == 0:
+            for ens in state_machine.ens_list:
+                if not ens.validate():
+                    self.logger.exception("Invalid ensemble %s to execute " + \
+                        "at %i. Unable to continue.", ens.title, ens.start_time)
+                    sys.exit()
 
         now = time.localtime()
         curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
@@ -112,7 +116,7 @@ class WakeUp(State):
 
     def update(self, state_machine):
         self.logger.info("Running WakeUp update func")
-        state_machine.curr_state = state_machine.check_time_state
+        state_machine.curr_state = CheckTime.get_singleton()
 
 class CheckTime(State):
     '''
@@ -120,10 +124,17 @@ class CheckTime(State):
     run an ensemble, or sleep until the next ensemble.
     '''
 
+    singleton = None
+
     def __init__(self):
         self.check_time_ctrl = CheckTimePath.SKIP
-        self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Check Time State")
+
+    @classmethod
+    def get_singleton(cls):
+        if CheckTime.singleton is None:
+            CheckTime.singleton = CheckTime()
+        return CheckTime.singleton
 
     def process(self, state_machine):
         self.logger.info("Running CheckTime process func")
@@ -140,7 +151,7 @@ class CheckTime(State):
                                                 now.tm_min,
                                                 now.tm_sec)
 
-            nearest_ens_time = state_machine.ens_list[state_machine.ens_index]["start_time"]
+            nearest_ens_time = state_machine.ens_list[state_machine.ens_index].start_time
 
             if nearest_ens_time < curr_time_seconds:
                 self.logger.info("Time is past current ens, checking for skip")
@@ -149,17 +160,15 @@ class CheckTime(State):
                         self.check_time_ctrl = CheckTimePath.WAIT
                     else:
                         self.check_time_ctrl = CheckTimePath.SKIP
-                        self.err_code = ErrorCode.MISSED_ENS
                 else:
                     self.check_time_ctrl = CheckTimePath.SKIP
-                    self.err_code = ErrorCode.MISSED_ENS
             elif nearest_ens_time <= curr_time_seconds + time_buffer:
                 self.logger.info("Correct time for ensemble: %s",
-                        state_machine.ens_list[state_machine.ens_index]['title'])
+                        state_machine.ens_list[state_machine.ens_index].title)
                 self.check_time_ctrl = CheckTimePath.RUN
             else:
                 self.logger.info("ensemble %s is still in future, go to sleep",
-                                 state_machine.ens_list[state_machine.ens_index]['title'])
+                                 state_machine.ens_list[state_machine.ens_index].title)
                 self.check_time_ctrl = CheckTimePath.WAIT
 
             state_machine.day_of_ens = now.tm_wday
@@ -171,39 +180,50 @@ class CheckTime(State):
             state_machine.daily_reset = True
 
     def update(self, state_machine):
-        # TODO: states shouldn't know about each other, let sm transition itself
         # TODO: use dict mapping to next state, not this if-else mess
         self.logger.info("Running CheckTime update func")
 
-        # if current_time is passed current_ensemble time,
+        # if current_time is passed current_ensemble time, report error and
         # transition to Iterate
         if self.check_time_ctrl == CheckTimePath.SKIP:
-            state_machine.error_state.error_code = self.error_code # temporary while states still update each other
-            state_machine.curr_state = state_machine.error_state
+            now = time.localtime()
+            curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
 
-        # if current_time == current_ensemble time,
-        # transition to PerformEnsemble state
+            self.logger.error("Skipping past missed ensemble: %s",
+                    state_machine.ens_list[state_machine.ens_index].title)
+            self.logger.info("Current time: %i", curr_time_seconds)
+            self.logger.info("Ensemble target time: %i",
+                    state_machine.ens_list[state_machine.ens_index].start_time)
+
+            state_machine.curr_state = Iterate.get_singleton()
+
+        # if it's time to exec the ensemble, transition to PerformEnsemble
         elif self.check_time_ctrl == CheckTimePath.RUN:
-            state_machine.curr_state = state_machine.perform_ensemble_state
+            state_machine.curr_state = PerformEnsemble.get_singleton()
 
-        # if current_time is less than current_ensemble time,
-        # transition to SLEEP state
+        # if we need to wait until the ensemble exec time, transition to Sleep
         elif self.check_time_ctrl == CheckTimePath.WAIT:
-            state_machine.curr_state = state_machine.sleep_state
+            state_machine.curr_state = Sleep.get_singleton()
 
-        # if all ensembles are done, need to sleep til first one of next day
+        # if all ensembles are done, need to sleep until first one of next day
         elif self.check_time_ctrl == CheckTimePath.RESET:
-            state_machine.curr_state = state_machine.check_time_state
+            state_machine.curr_state = CheckTime.get_singleton()
 
 class Iterate(State):
     '''
-    Iterate just increases the index by one then passes
-    back to CheckTime
+    Iterate just increases the index by one, then passes back to CheckTime
     '''
 
+    singleton = None
+
     def __init__(self):
-        self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Iterate State")
+
+    @classmethod
+    def get_singleton(cls):
+        if Iterate.singleton is None:
+            Iterate.singleton = Iterate()
+        return Iterate.singleton
 
     def process(self, state_machine):
         self.logger.info("Running Iterate process func")
@@ -215,25 +235,33 @@ class Iterate(State):
         self.logger.info("Running Iterate update func")
 
         # transition to CheckTime state
-        state_machine.curr_state = state_machine.check_time_state
+        state_machine.curr_state = CheckTime.get_singleton()
 
 class PerformEnsemble(State):
     '''
     PerformEnsemble runs the function associated with the current ensemble
     and then passes to Iterate
     '''
+
+    singleton = None
+
     def __init__(self):
-        self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Perform Ensemble State")
+
+    @classmethod
+    def get_singleton(cls):
+        if PerformEnsemble.singleton is None:
+            PerformEnsemble.singleton = PerformEnsemble()
+        return PerformEnsemble.singleton
 
     def process(self, state_machine):
         self.logger.info("Running PERFORM process func")
 
         # run the function of the current ensemble
-        self.perform_ensemble_functions(state_machine.ens_index)
+        state_machine.ens_list[ens_index].perform_ensemble_function()
 
         self.logger.info("Done performing %s",
-                state_machine.ens_list[state_machine.ens_index]['title'])
+                state_machine.ens_list[state_machine.ens_index].title)
 
         now = time.localtime()
         curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
@@ -242,38 +270,7 @@ class PerformEnsemble(State):
     def update(self, state_machine):
         self.logger.info("Running PERFORM update func")
         # always transition to Iterate state
-        state_machine.curr_state = state_machine.iterate_state
-
-    def perform_ensemble_functions(self, ensemble_index: int,
-                                    filename: str = "active_ensembles.json"):
-        '''
-        Function to call one non-member or static function.
-        It is required that the json has the following parameters provided:
-        title: "str"
-        function: "dir/module:function_str"
-        @param ensemble_index: index of the ensemble function being run
-        @param filename: specifies file with ensemble specifications
-        '''
-        with open(filename, encoding="utf-8") as user_file: # TODO: don't reload
-            file_contents = json.load(user_file)
-
-        curr_ens = file_contents['ensemble_list'][ensemble_index]
-        function = curr_ens["function"].split(":")
-
-        module_dir = function[0] + ".py"
-        module_name = function[0].split("/")[-1]
-
-        function_name = function[-1]
-
-        # Load module
-        # TODO: test to confirm this works with external packages
-        spec = importlib.util.spec_from_file_location(module_name, module_dir)
-        module = importlib.util.module_from_spec(spec)
-
-        spec.loader.exec_module(module)
-        class_function = getattr(module, function_name)
-
-        class_function()
+        state_machine.curr_state = Iterate.get_singleton()
 
 class Sleep(State):
     '''
@@ -283,22 +280,32 @@ class Sleep(State):
     sleep leads to CheckTime.
     '''
 
+    singleton = None
+
     def __init__(self):
         self.nearest_ens_time = 0
-        self.err_code = ErrorCode.NO_ERR
         self.logger = get_logger("Sleep State")
+
+    @classmethod
+    def get_singleton(cls):
+        if Sleep.singleton is None:
+            Sleep.singleton = Sleep()
+        return Sleep.singleton
 
     def process(self, state_machine):
         self.logger.info("Running Sleep process func")
 
         # write curr index to ens file before calcs
-        state_machine.ens["next_ensemble"] = state_machine.ens_index
-        with open(state_machine.ens_filename, "w", encoding="utf-8") as f_out:
-            json.dump(state_machine.ens, f_out, indent=4)
+        with open("active_ensembles.json", "w", encoding="utf-8") as f_out:
+            json_file = {
+                "ensemble_list": Ensemble.list_to_json(state_machine.ens_list),
+                "next_ensemble": state_machine.ens_index
+            }
+            json.dump(json_file, f_out, indent=4)
 
         now = time.localtime()
         curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
-        self.nearest_ens_time = state_machine.ens_list[state_machine.ens_index]["start_time"]
+        self.nearest_ens_time = state_machine.ens_list[state_machine.ens_index].start_time
 
         self.logger.info("Next ensemble at %i and current time %i",
                 self.nearest_ens_time, curr_time_seconds)
@@ -324,7 +331,7 @@ class Sleep(State):
             to_sleep = available_sleep_time - \
                     (state_machine.wakeup_time + state_machine.shutdown_time)
             self.logger.info("calling sleep timer's sleep(%i)", to_sleep)
-            state_machine.sleep_timer.sleep(to_sleep) # TODO: this will just be calling sleep, not sleep_timer.sleep
+            state_machine.sleep_func(to_sleep)
             time.sleep(1) # yield
 
             # Python sleep, sleep timer is offline
@@ -338,40 +345,7 @@ class Sleep(State):
                     available_sleep_time)
             time.sleep(available_sleep_time)
             self.logger.info("Changing state to CheckTime")
-            state_machine.curr_state = state_machine.check_time_state
-
-class Error(State):
-    '''
-    Error reports errors and then sends the control back where
-    it belongs, usually to Iterate
-    '''
-
-    def __init__(self):
-        self.err_msgs = ["No error recorded\n",                             # 0
-            "Skipping past missed ensemble.\n"]                             # 1
-
-        self.err_code = ErrorCode.NO_ERR
-        self.logger = get_logger("Error State")
-
-    def process(self, state_machine):
-        self.logger.info("Running Error process func")
-
-        now = time.localtime()
-        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
-
-        if self.err_code == ErrorCode.MISSED_ENS:
-            self.logger.info("Missed ensemble: %s",
-                    state_machine.ens_list[state_machine.ens_index]['title'])
-            self.logger.info("Current time: %i", curr_time_seconds)
-            self.logger.info("Ensemble target time: %i",
-                    state_machine.ens_list[state_machine.ens_index]['start_time'])
-            self.logger.error(self.err_msgs[ErrorCode.MISSED_ENS.value])
-
-    def update(self, state_machine):
-        self.logger.info("Running Error update func")
-
-        if state_machine.err_code == ErrorCode.MISSED_ENS:
-            state_machine.curr_state = state_machine.iterate_state
+            state_machine.curr_state = CheckTime.get_singleton()
 
 class StateMachine:
     '''
@@ -379,25 +353,20 @@ class StateMachine:
     from multiple states and runs an infinte loop of process and update
     '''
 
-    def __init__(self, filename: str = "active_ensembles.json"):
-        # TODO: make args ens list and sleep func
-        self.day_of_ens = 0
-        self.ens_filename = filename
-        self.ens = ""
+    def __init__( self,
+                ens_list: List[Ensemble],
+                sleep_func: Callable[[int], None] ):
+
+        self.ens_list = ens_list
         self.ens_index = 0
-        self.ens_list = ""
+        self.sleep_func = sleep_func
+
+        self.day_of_ens = 0
         self.daily_reset = False
 
-        self.wake_up_state = WakeUp()
-        self.check_time_state = CheckTime()
-        self.iterate_state = Iterate()
-        self.perform_ensemble_state = PerformEnsemble()
-        self.sleep_state = Sleep()
-        self.error_state = Error()
-        self.curr_state = self.wake_up_state
+        self.curr_state = WakeUp.get_singleton()
 
         self.logger = get_logger("State Machine")
-        self.__sleep_timer = None
         self.__wakeup_time = 5 # TODO: make defaults configurable or otherwise precalculate
         self.__shutdown_time = 5
 
@@ -405,17 +374,6 @@ class StateMachine:
         while True:
             self.curr_state.process(self)
             self.curr_state.update(self)
-
-    @property
-    def sleep_timer(self):
-        return self.__sleep_timer
-
-    @sleep_timer.setter
-    def sleep_timer(self, sleep_timer):
-        '''
-        Set this state machine's sleep timer reference
-        '''
-        self.__sleep_timer = sleep_timer
 
     @property
     def wakeup_time(self):
@@ -437,9 +395,31 @@ class StateMachine:
             self.logger.info("New shutdown time is less than previous!")
         self.__shutdown_time = sec
 
-def main():
-    control_flow = StateMachine()
+def main(ens_file: str):
+    '''
+    We run scheduler.py's main by passing in a file (e.g. active_ensembles.json)
+    specifying our ensemble list. However, we can create a StateMachine object
+    from just the ensemble list (not the whole file) when using the scheduler
+    module.
+    '''
+    try:
+        ens_list = Ensemble.list_from_json(ens_file)
+    except FileNotFoundError:
+        self.logger.exception("Active ensembles json file not found." + \
+                        "Unable to continue.\n")
+        sys.exit()
+    except KeyError:
+        self.logger.exception("Active ensembles json file is improperly " + \
+                        "formatted. Unable to continue.\n")
+        sys.exit()
+
+    control_flow = StateMachine(ens_list, time.sleep)
     control_flow.run_machine()
 
 if __name__ == "__main__":
-    main()
+    # check for input file argument
+    parser = argparse.ArgumentParser()
+    parser.add_argument('file', type=Path)
+    args = parser.parse_args()
+
+    main(args.file)

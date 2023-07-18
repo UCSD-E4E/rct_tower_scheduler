@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 '''
-Module containing utility functions.
+Module containing utility functions and constants.
 '''
+
+SECONDS_IN_DAY = 86400
 
 def hms_to_seconds(hour: int, minute: int, sec: int) -> int:
     """

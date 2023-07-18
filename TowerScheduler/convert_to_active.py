@@ -22,7 +22,6 @@ ensemble_schema = Schema(
             {
                 "title": str,
                 "function": Regex(r'^((\w)+\/)*\w+:\w+$'),
-                "inputs": list,
                 "start_time": {
                     "hour": int,
                     "minute": int,
@@ -60,19 +59,19 @@ def main(filein: Path):
             interval_sec = func["interval"]
             curr_obj = { "title": func["title"],
                     "function": func["function"],
-                    "inputs": func["inputs"],
                     "start_time": timestamp + interval_sec * j }
             ens_list.append(curr_obj)
 
+    '''
     # create an extra object for teardown function
     teardown_obj = {
         "title": "teardown",
         "function": "teardown",
-        "inputs": [],
         "start_time": LAST_SEC_OF_DAY
     }
 
     ens_list.append(teardown_obj)
+    '''
 
     # sort all the enumerated ensembles by time
     ens_list.sort(key=lambda ens:ens['start_time'])
