@@ -2,7 +2,7 @@
   "ensemble_list": [
     {
       "title": "zeta1",
-      "function": "tests/tester_functions:hello_world",
+      "function": "tests/test_scheduler:hello_world",
       "start_time": {
           "hour": 12,
           "minute": 40,
@@ -13,7 +13,7 @@
     },
     {
       "title": "zeta2",
-      "function": "tests/tester_functions:add_this",
+      "function": "tests/test_scheduler:add_this",
       "start_time": {
           "hour": 12,
           "minute": 50,
@@ -24,7 +24,7 @@
     },
     {
       "title": "dummy1",
-      "function": "tests/tester_functions:subtract_this",
+      "function": "tests/test_scheduler:subtract_this",
       "start_time": {
           "hour": 12,
           "minute": 30,
@@ -35,7 +35,7 @@
     },
     {
       "title": "alpha1",
-      "function": "tests/tester_functions:multiply_this",
+      "function": "tests/test_scheduler:multiply_this",
       "start_time": {
           "hour": 12,
           "minute": 45,
@@ -46,7 +46,7 @@
     },
     {
       "title": "dummy2",
-      "function": "tests/tester_functions:print_this",
+      "function": "tests/test_scheduler:print_this",
       "start_time": {
           "hour": 13,
           "minute": 0,
