@@ -16,6 +16,7 @@ import time
 from enum import Enum
 from pathlib import Path
 
+from TowerScheduler.config import Configuration
 from ensemble import Ensemble
 from util import hms_to_seconds, SECONDS_IN_DAY
 
@@ -85,7 +86,8 @@ class WakeUp(State):
     singleton = None
 
     def __init__(self):
-        self.logger = get_logger("Wake Up State")
+        self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.logger = get_logger("Wake Up State", self.config_obj.log_level)
 
     @classmethod
     def get_singleton(cls):
@@ -128,7 +130,8 @@ class CheckTime(State):
 
     def __init__(self):
         self.check_time_ctrl = CheckTimePath.SKIP
-        self.logger = get_logger("Check Time State")
+        self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.logger = get_logger("Check Time State", self.config_obj.log_level)
 
     @classmethod
     def get_singleton(cls):
@@ -142,7 +145,7 @@ class CheckTime(State):
 
         # this is a small window where if the scheduler wakes up
         # slightly early from sleep we allow it to run the ensemble anyway
-        time_buffer = 5 # TODO: allow configuration
+        time_buffer = self.config_obj.execute_buffer
 
         if state_machine.ens_index < len(state_machine.ens_list):
             # read time from ensemble and compare to current_time
@@ -217,7 +220,8 @@ class Iterate(State):
     singleton = None
 
     def __init__(self):
-        self.logger = get_logger("Iterate State")
+        self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.logger = get_logger("Iterate State", self.config_obj.log_level)
 
     @classmethod
     def get_singleton(cls):
@@ -246,7 +250,9 @@ class PerformEnsemble(State):
     singleton = None
 
     def __init__(self):
-        self.logger = get_logger("Perform Ensemble State")
+        self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.logger = get_logger("Perform Ensemble State",
+                                self.config_obj.log_level)
 
     @classmethod
     def get_singleton(cls):
@@ -284,7 +290,8 @@ class Sleep(State):
 
     def __init__(self):
         self.nearest_ens_time = 0
-        self.logger = get_logger("Sleep State")
+        self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.logger = get_logger("Sleep State", self.config_obj.log_level)
 
     @classmethod
     def get_singleton(cls):
@@ -313,6 +320,9 @@ class Sleep(State):
     def update(self, state_machine):
         self.logger.info("Running Sleep update func")
 
+        # write configuration to save any updates before sleep
+        self.config_obj.write()
+
         # recalc current_time vs (current_ensemble time + wakeup + shutdown)
         now = time.localtime()
         curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
@@ -327,9 +337,10 @@ class Sleep(State):
             available_sleep_time = self.nearest_ens_time - curr_time_seconds
 
         # if enough time, call shutdown
-        if available_sleep_time > state_machine.wakeup_time + state_machine.shutdown_time:
+        if available_sleep_time > \
+                (self.config_obj.wakeup_time + self.config_obj.shutdown_time):
             to_sleep = available_sleep_time - \
-                    (state_machine.wakeup_time + state_machine.shutdown_time)
+                (self.config_obj.wakeup_time + self.config_obj.shutdown_time)
             self.logger.info("calling sleep timer's sleep(%i)", to_sleep)
             state_machine.sleep_func(to_sleep)
             time.sleep(1) # yield
@@ -357,6 +368,8 @@ class StateMachine:
                 ens_list: List[Ensemble],
                 sleep_func: Callable[[int], None] ):
 
+        self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
+
         self.ens_list = ens_list
         self.ens_index = 0
         self.sleep_func = sleep_func
@@ -366,9 +379,9 @@ class StateMachine:
 
         self.curr_state = WakeUp.get_singleton()
 
-        self.logger = get_logger("State Machine")
-        self.__wakeup_time = 5 # TODO: make defaults configurable or otherwise precalculate
-        self.__shutdown_time = 5
+        self.logger = get_logger("State Machine", self.config_obj.log_level)
+        self.__wakeup_time = self.config_obj.wakeup_time
+        self.__shutdown_time = self.config_obj.shutdown_time
 
     def run_machine(self):
         while True:
@@ -377,42 +390,25 @@ class StateMachine:
 
     @property
     def wakeup_time(self):
-        return self.__wakeup_time
+        return self.config_obj.wakeup_time
 
     @wakeup_time.setter
     def wakeup_time(self, sec: int):
-        if sec < self.__wakeup_time:
-            self.logger.info("New wakeup time is less than previous!")
-        self.__wakeup_time = sec
+        if sec < self.config_obj.wakeup_time:
+            self.logger.info("New wakeup time %i is less than previous!", sec)
+        self.config_obj.wakeup_time = sec
 
     @property
     def shutdown_time(self):
-        return self.__shutdown_time
+        return self.config_obj.shutdown_time
 
     @shutdown_time.setter
     def shutdown_time(self, sec: int):
-        if sec < self.__shutdown_time:
-            self.logger.info("New shutdown time is less than previous!")
-        self.__shutdown_time = sec
+        if sec < self.config_obj.shutdown_time:
+            self.logger.info("New shutdown time %i is less than previous!", sec)
+        self.config_obj.shutdown_time = sec
 
-def main(ens_file: str):
-    '''
-    We run scheduler.py's main by passing in a file (e.g. active_ensembles.json)
-    specifying our ensemble list. However, we can create a StateMachine object
-    from just the ensemble list (not the whole file) when using the scheduler
-    module.
-    '''
-    try:
-        ens_list = Ensemble.list_from_json(ens_file)
-    except FileNotFoundError:
-        self.logger.exception("Active ensembles json file not found." + \
-                        "Unable to continue.\n")
-        sys.exit()
-    except KeyError:
-        self.logger.exception("Active ensembles json file is improperly " + \
-                        "formatted. Unable to continue.\n")
-        sys.exit()
-
+def main(ens_list: list[Ensemble]):
     control_flow = StateMachine(ens_list, time.sleep)
     control_flow.run_machine()
 
@@ -422,4 +418,15 @@ if __name__ == "__main__":
     parser.add_argument('file', type=Path)
     args = parser.parse_args()
 
-    main(args.file)
+    try:
+        ens_list = Ensemble.list_from_json(args.file)
+    except FileNotFoundError:
+        logging.exception("Active ensembles json file not found." + \
+                        "Unable to continue.\n")
+        sys.exit()
+    except KeyError:
+        logging.exception("Active ensembles json file is improperly " + \
+                        "formatted. Unable to continue.\n")
+        sys.exit()
+
+    main(ens_list)
