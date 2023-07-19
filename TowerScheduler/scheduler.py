@@ -16,8 +16,8 @@ import time
 from enum import Enum
 from pathlib import Path
 
-from TowerScheduler.config import Configuration
 from ensemble import Ensemble
+from TowerScheduler.config import Configuration
 from util import hms_to_seconds, SECONDS_IN_DAY
 
 class CheckTimePath(Enum):
@@ -133,6 +133,13 @@ class CheckTime(State):
         self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
         self.logger = get_logger("Check Time State", self.config_obj.log_level)
 
+        self.ctrl_to_state = {
+            CheckTimePath.SKIP: Iterate.get_singleton(),
+            CheckTimePath.RUN: PerformEnsemble.get_singleton(),
+            CheckTimePath.WAIT: Sleep.get_singleton(),
+            CheckTimePath.RESET: self
+        }
+
     @classmethod
     def get_singleton(cls):
         if CheckTime.singleton is None:
@@ -183,11 +190,9 @@ class CheckTime(State):
             state_machine.daily_reset = True
 
     def update(self, state_machine):
-        # TODO: use dict mapping to next state, not this if-else mess
         self.logger.info("Running CheckTime update func")
 
-        # if current_time is passed current_ensemble time, report error and
-        # transition to Iterate
+        # if current_time is passed current_ensemble time, report error
         if self.check_time_ctrl == CheckTimePath.SKIP:
             now = time.localtime()
             curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
@@ -198,19 +203,7 @@ class CheckTime(State):
             self.logger.info("Ensemble target time: %i",
                     state_machine.ens_list[state_machine.ens_index].start_time)
 
-            state_machine.curr_state = Iterate.get_singleton()
-
-        # if it's time to exec the ensemble, transition to PerformEnsemble
-        elif self.check_time_ctrl == CheckTimePath.RUN:
-            state_machine.curr_state = PerformEnsemble.get_singleton()
-
-        # if we need to wait until the ensemble exec time, transition to Sleep
-        elif self.check_time_ctrl == CheckTimePath.WAIT:
-            state_machine.curr_state = Sleep.get_singleton()
-
-        # if all ensembles are done, need to sleep until first one of next day
-        elif self.check_time_ctrl == CheckTimePath.RESET:
-            state_machine.curr_state = CheckTime.get_singleton()
+        state_machine.curr_state = self.ctrl_to_state[self.check_time_ctrl]
 
 class Iterate(State):
     '''
@@ -345,10 +338,14 @@ class Sleep(State):
             state_machine.sleep_func(to_sleep)
             time.sleep(1) # yield
 
-            # Python sleep, sleep timer is offline
+            # recalc for Python sleep, sleep timer is offline
+            now = time.localtime()
+            curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
+            available_sleep_time = self.nearest_ens_time - curr_time_seconds
+
             self.logger.error("Sleep timer failed to shut tower down. Calling" \
-                    + "Python's time.sleep for %i seconds", available_sleep_time)
-            time.sleep(to_sleep)
+                + "Python's time.sleep for %i seconds", available_sleep_time)
+            time.sleep(available_sleep_time)
 
         else:
             # if not enough time, call Python sleep
@@ -369,19 +366,21 @@ class StateMachine:
                 sleep_func: Callable[[int], None] ):
 
         self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.logger = get_logger("State Machine", self.config_obj.log_level)
 
+        # State machine's data on ensemble schedule: list and next to execute
         self.ens_list = ens_list
         self.ens_index = 0
+
+        # Sleep timer's sleep func to call in order to shut tower down
         self.sleep_func = sleep_func
 
+        # Data used when transitioning from end of one day to beginning of next
         self.day_of_ens = 0
         self.daily_reset = False
 
+        # Start from wakeup state
         self.curr_state = WakeUp.get_singleton()
-
-        self.logger = get_logger("State Machine", self.config_obj.log_level)
-        self.__wakeup_time = self.config_obj.wakeup_time
-        self.__shutdown_time = self.config_obj.shutdown_time
 
     def run_machine(self):
         while True:
@@ -407,6 +406,7 @@ class StateMachine:
         if sec < self.config_obj.shutdown_time:
             self.logger.info("New shutdown time %i is less than previous!", sec)
         self.config_obj.shutdown_time = sec
+
 
 def main(ens_list: list[Ensemble]):
     control_flow = StateMachine(ens_list, time.sleep)

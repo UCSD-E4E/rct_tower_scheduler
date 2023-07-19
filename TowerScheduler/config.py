@@ -50,9 +50,9 @@ class Configuration:
         parser.read_dict(self.__create_dict())
         parser.read(self.__config_path.as_posix())
 
-        self.__wakeup_time = parser['Sleep'].getint('defaultWakeup')
-        self.__shutdown_time = parser['Sleep'].getint('defaultShutdown')
-        self.__execute_buffer = parser['Sleep'].getint('executeBuffer')
+        self.__wakeup_time = parser['Sleep'].getint('wakeup_time')
+        self.__shutdown_time = parser['Sleep'].getint('shutdown_time')
+        self.__execute_buffer = parser['Sleep'].getint('execute_buffer')
 
         self.__log_level = parser['Logging'].getint('level')
 
