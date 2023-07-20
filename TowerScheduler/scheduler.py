@@ -9,6 +9,7 @@ at which point the sleep timer shuts down the machine running the state machine.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import logging
 import sys
@@ -18,7 +19,6 @@ from pathlib import Path
 
 from ensemble import Ensemble
 from TowerScheduler.config import Configuration
-from util import hms_to_seconds, SECONDS_IN_DAY
 
 class CheckTimePath(Enum):
     '''
@@ -111,10 +111,10 @@ class WakeUp(State):
                         "at %i. Unable to continue.", ens.title, ens.start_time)
                     sys.exit()
 
-        now = time.localtime()
-        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
+        now = dt.datetime.now().time()
 
-        self.logger.info("Waking up at seconds = %i", curr_time_seconds)
+        self.logger.info("Waking up at %02i:%02i:%02i",
+                        now.hour, now.minute, now.second)
 
     def update(self, state_machine):
         self.logger.info("Running WakeUp update func")
@@ -152,36 +152,32 @@ class CheckTime(State):
 
         # this is a small window where if the scheduler wakes up
         # slightly early from sleep we allow it to run the ensemble anyway
-        time_buffer = self.config_obj.execute_buffer
+        time_buffer = dt.timedelta(seconds=self.config_obj.execute_buffer)
 
         if state_machine.ens_index < len(state_machine.ens_list):
             # read time from ensemble and compare to current_time
-            now = time.localtime()
-            curr_time_seconds = hms_to_seconds(now.tm_hour,
-                                                now.tm_min,
-                                                now.tm_sec)
-
+            now = dt.datetime.now()
             nearest_ens_time = state_machine.ens_list[state_machine.ens_index].start_time
 
-            if nearest_ens_time < curr_time_seconds:
+            if nearest_ens_time < now.time():
                 self.logger.info("Time is past current ens, checking for skip")
                 if state_machine.daily_reset:
-                    if now.tm_wday == state_machine.day_of_ens:
+                    if now.day == state_machine.day_of_ens:
                         self.check_time_ctrl = CheckTimePath.WAIT
                     else:
                         self.check_time_ctrl = CheckTimePath.SKIP
                 else:
                     self.check_time_ctrl = CheckTimePath.SKIP
-            elif nearest_ens_time <= curr_time_seconds + time_buffer:
+            elif nearest_ens_time <= (now + time_buffer).time():
                 self.logger.info("Correct time for ensemble: %s",
                         state_machine.ens_list[state_machine.ens_index].title)
                 self.check_time_ctrl = CheckTimePath.RUN
             else:
                 self.logger.info("ensemble %s is still in future, go to sleep",
-                                 state_machine.ens_list[state_machine.ens_index].title)
+                        state_machine.ens_list[state_machine.ens_index].title)
                 self.check_time_ctrl = CheckTimePath.WAIT
 
-            state_machine.day_of_ens = now.tm_wday
+            state_machine.day_of_ens = now.day
             state_machine.daily_reset = False
         else:
             self.logger.info("Index beyond last ens, resetting")
@@ -194,14 +190,17 @@ class CheckTime(State):
 
         # if current_time is passed current_ensemble time, report error
         if self.check_time_ctrl == CheckTimePath.SKIP:
-            now = time.localtime()
-            curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
+            now = dt.datetime.now()
+            curr_ensemble = state_machine.ens_list[state_machine.ens_index]
 
             self.logger.error("Skipping past missed ensemble: %s",
-                    state_machine.ens_list[state_machine.ens_index].title)
-            self.logger.info("Current time: %i", curr_time_seconds)
-            self.logger.info("Ensemble target time: %i",
-                    state_machine.ens_list[state_machine.ens_index].start_time)
+                                curr_ensemble.title)
+            self.logger.info("Current time: %02i:%02i:%02i",
+                                now.hour, now.minute, now.second)
+            self.logger.info("Ensemble target time: %02i:%02i:%02i",
+                                curr_ensemble.start_time.hour,
+                                curr_ensemble.start_time.minute,
+                                curr_ensemble.start_time.second)
 
         state_machine.curr_state = self.ctrl_to_state[self.check_time_ctrl]
 
@@ -262,13 +261,12 @@ class PerformEnsemble(State):
         self.logger.info("Done performing %s",
                 state_machine.ens_list[state_machine.ens_index].title)
 
-        now = time.localtime()
-        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
-        self.logger.info("Time is now seconds = %i", curr_time_seconds)
+        now = dt.datetime.now()
+        self.logger.info("Time is now %02i:%02i:%02i",
+                now.hour, now.minute, now.second)
 
     def update(self, state_machine):
         self.logger.info("Running PERFORM update func")
-        # always transition to Iterate state
         state_machine.curr_state = Iterate.get_singleton()
 
 class Sleep(State):
@@ -282,7 +280,7 @@ class Sleep(State):
     singleton = None
 
     def __init__(self):
-        self.nearest_ens_time = 0
+        self.nearest_ens_time: dt.time = None
         self.config_obj = Configuration.get_singleton(Path('schedulerConfig.ini'))
         self.logger = get_logger("Sleep State", self.config_obj.log_level)
 
@@ -303,12 +301,16 @@ class Sleep(State):
             }
             json.dump(json_file, f_out, indent=4)
 
-        now = time.localtime()
-        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
-        self.nearest_ens_time = state_machine.ens_list[state_machine.ens_index].start_time
+        now = dt.datetime.now()
+        self.nearest_ens_time = dt.datetime.combine(dt.date.today(),
+                state_machine.ens_list[state_machine.ens_index].start_time)
 
-        self.logger.info("Next ensemble at %i and current time %i",
-                self.nearest_ens_time, curr_time_seconds)
+        self.logger.info("Next ensemble is at %02i:%02i:%02i, "+ \
+                "and current time is %02i:%02i:%02i",
+                    self.nearest_ens_time.hour,
+                    self.nearest_ens_time.minute,
+                    self.nearest_ens_time.second,
+                    now.hour, now.minute, now.second)
 
     def update(self, state_machine):
         self.logger.info("Running Sleep update func")
@@ -317,17 +319,22 @@ class Sleep(State):
         self.config_obj.write()
 
         # recalc current_time vs (current_ensemble time + wakeup + shutdown)
-        now = time.localtime()
-        curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
-        if self.nearest_ens_time < curr_time_seconds:
+        now = dt.datetime.now()
+
+        if self.nearest_ens_time.time() < now.time():
             self.logger.info("Last ensemble finished, index reset; " + \
                             "next ens is on next day")
-            time_left_today = SECONDS_IN_DAY - curr_time_seconds
-            available_sleep_time = time_left_today + self.nearest_ens_time
+            max_today = dt.datetime.combine(dt.date.today(), dt.time.max)
+            to_nearest = dt.timedelta(hours=self.nearest_ens_time.hour,
+                                    minutes=self.nearest_ens_time.minute,
+                                    seconds=self.nearest_ens_time.second)
+
+            time_left_today = max_today - now
+            available_sleep_time = (time_left_today + to_nearest).total_seconds()
         else:
             self.logger.info("Current time less than next ens; " + \
                             "next ens is on same day")
-            available_sleep_time = self.nearest_ens_time - curr_time_seconds
+            available_sleep_time = (self.nearest_ens_time - now).total_seconds()
 
         # if enough time, call shutdown
         if available_sleep_time > \
@@ -338,14 +345,10 @@ class Sleep(State):
             state_machine.sleep_func(to_sleep)
             time.sleep(1) # yield
 
-            # recalc for Python sleep, sleep timer is offline
-            now = time.localtime()
-            curr_time_seconds = hms_to_seconds(now.tm_hour, now.tm_min, now.tm_sec)
-            available_sleep_time = self.nearest_ens_time - curr_time_seconds
-
+            # Python sleep, sleep timer is offline
             self.logger.error("Sleep timer failed to shut tower down. Calling" \
-                + "Python's time.sleep for %i seconds", available_sleep_time)
-            time.sleep(available_sleep_time)
+                + " Python's time.sleep for %i seconds", to_sleep)
+            time.sleep(to_sleep)
 
         else:
             # if not enough time, call Python sleep

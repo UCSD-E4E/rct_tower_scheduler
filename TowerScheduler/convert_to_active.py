@@ -8,11 +8,11 @@ time.
 '''
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
 
 from schema import Regex, Schema
-from util import hms_to_seconds
 
 LAST_SEC_OF_DAY = 86399
 
@@ -22,11 +22,7 @@ ensemble_schema = Schema(
             {
                 "title": str,
                 "function": Regex(r'^((\w)+\/)*\w+:\w+$'),
-                "start_time": {
-                    "hour": int,
-                    "minute": int,
-                    "second": int
-                },
+                "start_time": Regex(r'^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]$'),
                 "iterations": int,
                 "interval": int
             }
@@ -50,16 +46,17 @@ def main(filein: Path):
     json_file = []
     # double loop adds all ensembles and their iterations to a list
     for func in ens["ensemble_list"]:
-        curr_hour = func["start_time"]["hour"]
-        curr_min = func["start_time"]["minute"]
-        curr_sec = func["start_time"]["second"]
-        timestamp = hms_to_seconds(curr_hour, curr_min, curr_sec)
+        start_time = dt.time.fromisoformat(func["start_time"])
 
         for j in range(func["iterations"]):
-            interval_sec = func["interval"]
+            interval_sec = dt.timedelta(seconds=func["interval"])
+
+            this_iteration_time = (dt.datetime.combine(dt.date.today(), start_time) + \
+                interval_sec * j).time()
+
             curr_obj = { "title": func["title"],
                     "function": func["function"],
-                    "start_time": timestamp + interval_sec * j }
+                    "start_time":  str(this_iteration_time) }
             ens_list.append(curr_obj)
 
     '''

@@ -29,11 +29,7 @@ Functions to perform should be stored in the following json format:
     {
             "title": "print",
             "function": "path_to_module.module:function_name",
-            "start_time": {
-                "hour": 8,
-                "minute": 0,
-                "second": 30
-            },
+            "start_time": "hh:mm:ss",
             "iterations": 5,
             "interval": 60
         }
@@ -43,10 +39,10 @@ Functions to perform should be stored in the following json format:
 ```
 With each item being of the correct type:
 - function: period-delimited path to a callable function followed by function name, separated by a colon; function cannot take arguments
-- starting time:
-  - hour: hour at which to start [0, 23]
-  - minute: minute at which to start [0, 59]
-  - second: second at which to start [0, 59]
+- starting time: colon-separated string containing hour, minute, and second at which to start:
+  - hh two-digit hour in range [00, 23]
+  - mm two-digit minute in range [00, 59]
+  - ss two-digit second in range [00, 59]
 - iterations: int
 - interval (seconds between iterations): int
 
@@ -74,6 +70,7 @@ python scheduler.py
 
 ## Testing
 - `dummy_ensembles.json` is provided as an example initial file
+- convert desired ensemble schedule to active_ensembles.json as described above
 - start the scheduler as above to run it
 
 ## Outline

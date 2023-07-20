@@ -5,13 +5,12 @@ ensemble to be performed by our towers.
 
 from __future__ import annotations
 
+import datetime as dt
 import importlib.util
 import inspect
 import json
 
 from pathlib import Path
-
-from util import SECONDS_IN_DAY
 
 class Ensemble:
     '''
@@ -20,7 +19,7 @@ class Ensemble:
     a json file
     '''
 
-    def __init__(self, title: str, function: str, start_time: int):
+    def __init__(self, title: str, function: str, start_time: dt.time):
         self.title = title
         self.start_time = start_time
 
@@ -49,9 +48,10 @@ class Ensemble:
 
         ens_list = []
         for ens in ens_list_json:
+            ens_time = dt.time.fromisoformat(ens["start_time"])
             ens_list.append( Ensemble(ens["title"],
                                     ens["function"],
-                                    ens["start_time"]) )
+                                    ens_time) )
 
         return ens_list
 
@@ -71,7 +71,7 @@ class Ensemble:
             function = ens.module_dir[0:-3] + ":" + ens.function_name
             ens_dict = {"title": ens.title,
                         "function": function,
-                        "start_time": ens.start_time}
+                        "start_time": str(ens.start_time)}
             json_list.append(ens_dict)
 
         return json_list
@@ -99,7 +99,8 @@ class Ensemble:
         @return True if Ensemble is valid, else False
         '''
 
-        valid_start = self.start_time >= 0 and self.start_time < SECONDS_IN_DAY
+        valid_start = self.start_time > dt.time.min and \
+                    self.start_time < dt.time.max
 
         try:
             spec = importlib.util.spec_from_file_location(self.module_name,
