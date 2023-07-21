@@ -21,7 +21,7 @@ ensemble_schema = Schema(
         "ensemble_list": [
             {
                 "title": str,
-                "function": Regex(r'^((\w)+\/)*\w+:\w+$'),
+                "function": Regex(r'^((\w)+.)*\w+:\w+$'),
                 "start_time": Regex(r'^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]$'),
                 "iterations": int,
                 "interval": int

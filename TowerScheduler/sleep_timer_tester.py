@@ -1,5 +1,4 @@
 #!/usr/bin/python3
-
 '''
 Module to facilitate testing the sleep timer scheduler found in scheduler.py.
 This includes a mock SleepTimer class and a main loop to fork a new process
@@ -24,14 +23,15 @@ from multiprocessing import shared_memory
 from ensemble import Ensemble
 from scheduler import StateMachine
 
+
 class SleepTimerTester:
     '''
     SleepTimer object specifically for testing. This tester object's sleep
     function may be passed in to initialize a StateMachine in scheduler.py.
     '''
     def __init__(self):
-        self.starttime_memory = None
-        self.sleeptime_memory = None
+        self.starttime_memory: shared_memory.SharedMemory = None
+        self.sleeptime_memory: shared_memory.SharedMemory = None
 
     def sleep(self, sec: int):
         '''
@@ -61,6 +61,7 @@ class SleepTimerTester:
         @param memory: SharedMemory with a size of 8 bytes (to store one long)
         '''
         self.starttime_memory = memory
+
 
 def main():
     logger = logging.getLogger("sleep_timer_tester")

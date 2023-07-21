@@ -23,9 +23,7 @@ class Ensemble:
         self.title = title
         self.start_time = start_time
 
-        module_raw = function.split(':')[0]
-        self.module_dir = module_raw + ".py"
-        self.module_name = module_raw.split("/")[-1]
+        self.module_name = function.split(':')[0]
         self.function_name = function.split(':')[-1]
 
     @classmethod
@@ -82,8 +80,7 @@ class Ensemble:
         '''
 
         # TODO: test to confirm this works with external packages
-        spec = importlib.util.spec_from_file_location(self.module_name,
-                                                    self.module_dir)
+        spec = importlib.util.find_spec(self.module_name)
         module = importlib.util.module_from_spec(spec)
 
         spec.loader.exec_module(module)
@@ -103,8 +100,7 @@ class Ensemble:
                     self.start_time < dt.time.max
 
         try:
-            spec = importlib.util.spec_from_file_location(self.module_name,
-                                                        self.module_dir)
+            spec = importlib.util.find_spec(self.module_name)
             module = importlib.util.module_from_spec(spec)
         except ModuleNotFoundError:
             return False

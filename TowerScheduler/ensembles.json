@@ -2,35 +2,35 @@
   "ensemble_list": [
     {
       "title": "zeta1",
-      "function": "tests/tester_functions:hello_world",
+      "function": "tests.tester_functions:hello_world",
       "start_time": "12:40:15",
       "iterations": 5,
       "interval": 60
     },
     {
       "title": "zeta2",
-      "function": "tests/tester_functions:add_this",
+      "function": "tests.tester_functions:add_this",
       "start_time": "12:50:30",
       "iterations": 5,
       "interval": 60
     },
     {
       "title": "dummy1",
-      "function": "tests/tester_functions:subtract_this",
+      "function": "tests.tester_functions:subtract_this",
       "start_time": "12:30:00",
       "iterations": 5,
       "interval": 60
     },
     {
       "title": "alpha1",
-      "function": "tests/tester_functions:multiply_this",
+      "function": "tests.tester_functions:multiply_this",
       "start_time": "12:45:00",
       "iterations": 5,
       "interval": 60
     },
     {
       "title": "dummy2",
-      "function": "tests/tester_functions:print_this",
+      "function": "tests.tester_functions:print_this",
       "start_time": "18:00:00",
       "iterations": 5,
       "interval": 60
