@@ -10,14 +10,28 @@ setup(
     author_email='e4e@eng.ucsd.edu',
     entry_points={
         'console_scripts': [
-            'scheduler = TowerScheduler.scheduler:main', # TODO: takes an arg now
+            'convertToActive = TowerScheduler.convertToActive:main',
+            'scheduler = TowerScheduler.scheduler:main',
             'sleepTimerTester = TowerScheduler.sleepTimerTester:main'
-            # TODO: convertToActive entry point, but needs to take an arg
         ]
     },
     packages=find_packages(),
-    install_requires=[], # TODO
+    install_requires=[
+        'configparser',
+        'datetime',
+        'enum',
+        'json',
+        'multiprocessing',
+        'os',
+        'pathlib',
+        'signal',
+        'typing'
+    ],
     extras_require={
+        'convertToActive': [
+            'argparse',
+            'schema'
+        ],
         'dev': [
             'pytest',
             'coverage',

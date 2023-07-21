@@ -418,18 +418,9 @@ class StateMachine:
         self.config.shutdown_time = sec
 
 
-def main(ens_list: list[Ensemble]):
-    control_flow = StateMachine(ens_list, time.sleep)
-    control_flow.run_machine()
-
-if __name__ == "__main__":
-    # check for input file argument
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file', type=Path)
-    args = parser.parse_args()
-
+def main(ens_file: Path = "active_ensembles.json"):
     try:
-        ens_list = Ensemble.list_from_json(args.file)
+        ens_list = Ensemble.list_from_json(ens_file)
     except FileNotFoundError:
         logging.exception("Active ensembles file not found. " + \
                         "Unable to continue.\n")
@@ -439,4 +430,13 @@ if __name__ == "__main__":
                         "Unable to continue.\n")
         sys.exit()
 
-    main(ens_list)
+    control_flow = StateMachine(ens_list, time.sleep)
+    control_flow.run_machine()
+
+if __name__ == "__main__":
+    # check for input file argument
+    parser = argparse.ArgumentParser()
+    parser.add_argument('file', type=Path)
+    args = parser.parse_args()
+
+    main(args.file)

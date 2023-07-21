@@ -30,7 +30,7 @@ ensemble_schema = Schema(
     }
 )
 
-def main(filein: Path):
+def main(filein: Path = "ensembles.json"):
     """
     Read the ensembles file, enumerate all ensembles and iterations,
     sort them, then write them into active_ensembles.json
