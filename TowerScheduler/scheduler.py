@@ -256,7 +256,7 @@ class PerformEnsemble(State):
         self.logger.info("Running PERFORM process func")
 
         # run the function of the current ensemble
-        state_machine.ens_list[ens_index].perform_ensemble_function()
+        state_machine.ens_list[state_machine.ens_index].perform_ensemble_function()
 
         self.logger.info("Done performing %s",
                 state_machine.ens_list[state_machine.ens_index].title)
@@ -355,8 +355,9 @@ class Sleep(State):
             self.logger.info("Calling Python's time.sleep for %i seconds",
                     available_sleep_time)
             time.sleep(available_sleep_time)
-            self.logger.info("Changing state to CheckTime")
-            state_machine.curr_state = CheckTime.get_singleton()
+        
+        self.logger.info("Changing state to CheckTime")
+        state_machine.curr_state = CheckTime.get_singleton()
 
 class StateMachine:
     '''
