@@ -57,9 +57,7 @@ It can be found in the `TowerScheduler` directory. Use it like this:
 python convertToActive.py input_file.json
 ```
 
-The script uses input file `dummy_ensembles.json` by default and always outputs
-to `active_ensembles.json`. Be careful since it will overwrite a previous
-active ensembles file.
+The script always outputs to `active_ensembles.json`. Be careful since it will overwrite a previous active ensembles file.
 
 ## Usage
 Once you have a proper `active_ensembles.json` file in the same directory
@@ -69,7 +67,7 @@ python scheduler.py
 ```
 
 ## Testing
-- `dummy_ensembles.json` is provided as an example initial file
+- an example `ensembles.json` is provided
 - convert desired ensemble schedule to active_ensembles.json as described above
 - start the scheduler as above to run it
 
