@@ -69,8 +69,7 @@ def main():
 
     # data that will become our json file format
     json_file = {
-        "ensemble_list": ens_list,
-        "next_ensemble": 0
+        "ensemble_list": ens_list
     }
 
     # open/create file in overwrite mode

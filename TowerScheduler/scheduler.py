@@ -124,7 +124,7 @@ class WakeUp(State):
     def process(self, state_machine):
         self.__log.info("Running WakeUp process func")
 
-        with open("active_ensembles.json", "r", encoding="utf-8") as f_in:
+        with open("current_ensemble.json", "r", encoding="utf-8") as f_in:
             ens_json = json.load(f_in)
 
         state_machine.ens_index = ens_json["next_ensemble"]
@@ -138,7 +138,7 @@ class WakeUp(State):
                         ens.title, ens.start_time.isoformat())
                     raise AttributeError
 
-        now = dt.datetime.now().time()
+        now = dt.datetime.now()
 
         self.__log.info("Waking up at %s", now.isoformat())
 
@@ -317,9 +317,8 @@ class Sleep(State):
         self.__log.info("Running Sleep process func")
 
         # write curr index to ens file before calcs
-        with open("active_ensembles.json", "w", encoding="utf-8") as f_out:
+        with open("current_ensemble.json", "w", encoding="utf-8") as f_out:
             json_file = {
-                "ensemble_list": Ensemble.list_to_json(state_machine.ens_list),
                 "next_ensemble": state_machine.ens_index
             }
             json.dump(json_file, f_out, indent=4)
