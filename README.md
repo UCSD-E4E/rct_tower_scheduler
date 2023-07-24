@@ -62,9 +62,9 @@ Once you have a proper `active_ensembles.json` file, start the scheduler with:
 python scheduler.py
 ```
 
-If you want to use a file other than `active_ensembles.json`, you may specify this other file with the `--file` argument:
+If you want to use a file other than `active_ensembles.json`, you may specify this other file with the `--file` argument. You may also ensure the scheduler starts from the first ensemble of the day with the `--reset` option. Both of these options are used as follows:
 ```
-python scheduler.py --file path_to_file/ensemble_file.json
+python scheduler.py --file path_to_file/ensemble_file.json --reset True
 ```
 
 ## Testing

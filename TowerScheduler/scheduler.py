@@ -224,7 +224,7 @@ class CheckTime(State):
 
             self.__log.error("Skipping past missed ensemble: %s",
                                 curr_ensemble.title)
-            self.__log.info("Current time: %s", now.isoformat())
+            self.__log.info("Current time: %s", now.time().isoformat())
             self.__log.info("Ensemble target time: %s",
                                 curr_ensemble.start_time.isoformat())
 
@@ -285,7 +285,7 @@ class PerformEnsemble(State):
         self.__log.info("Done performing %s", curr_ens.title)
 
         now = dt.datetime.now()
-        self.__log.info("Time is now %s", now.isoformat())
+        self.__log.info("Time is now %s", now.time().isoformat())
 
     def update(self, state_machine):
         self.__log.info("Running PERFORM update func")
@@ -419,6 +419,7 @@ class StateMachine:
         if sec < self.config.wakeup_time:
             self.__log.info("New wakeup time %i is less than previous!", sec)
         self.config.wakeup_time = sec
+        self.config.write()
 
     @property
     def shutdown_time(self):
@@ -429,12 +430,14 @@ class StateMachine:
         if sec < self.config.shutdown_time:
             self.__log.info("New shutdown time %i is less than previous!", sec)
         self.config.shutdown_time = sec
+        self.config.write()
 
 
 def main():
     # check for input file argument
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=Path, default='active_ensembles.json')
+    parser.add_argument('--reset', type=bool, default=False)
     args = parser.parse_args()
 
     try:
@@ -447,6 +450,13 @@ def main():
         logging.exception("Active ensembles file is improperly formatted. " + \
                         "Unable to continue.\n")
         raise KeyError
+
+    if args.reset:
+        with open("current_ensemble.json", "w", encoding="utf-8") as f_out:
+            json_file = {
+                "next_ensemble": 0
+            }
+            json.dump(json_file, f_out, indent=4)
 
     StateMachine(ens_list, time.sleep).run_machine()
 
