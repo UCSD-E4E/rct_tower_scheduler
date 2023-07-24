@@ -328,45 +328,32 @@ class Sleep(State):
                 state_machine.ens_list[state_machine.ens_index].start_time)
 
         self.__log.info("Next ensemble is at %s, and current time is %s",
-                    self.nearest_ens_time.isoformat(), now.isoformat())
+                    self.nearest_ens_time.time().isoformat(),
+                    now.time().isoformat())
 
     def update(self, state_machine):
         self.__log.info("Running Sleep update func")
 
         buffer = self.config.wakeup_time + self.config.shutdown_time
 
-        # write configuration to save any updates before sleep
-        self.config.write()
-
-        # recalc current_time vs (current_ensemble time + wakeup + shutdown)
-        now = dt.datetime.now()
-
-        if self.nearest_ens_time.time() < now.time():
-            self.__log.info("Last ensemble finished, index reset; " + \
-                            "next ens is on next day")
-            max_today = dt.datetime.combine(dt.date.today(), dt.time.max)
-            to_nearest = dt.timedelta(hours=self.nearest_ens_time.hour,
-                                    minutes=self.nearest_ens_time.minute,
-                                    seconds=self.nearest_ens_time.second)
-
-            left_today = max_today - now
-            available_sleep_time = (left_today + to_nearest).total_seconds()
-        else:
-            self.__log.info("Current time less than next ens; " + \
-                            "next ens is on same day")
-            available_sleep_time = (self.nearest_ens_time - now).total_seconds()
+        # recalc current_time, and subtract buffer from calculated available
+        # time to give ourselves a safely early wakeup
+        available_sleep_time = self.seconds_until(self.nearest_ens_time) - \
+                                self.config.execute_buffer
 
         # if enough time, call shutdown
         if available_sleep_time > buffer:
             to_sleep = available_sleep_time - buffer
             self.__log.info("calling sleep timer's sleep(%i)", to_sleep)
             state_machine.sleep_func(to_sleep)
-            time.sleep(1) # yield
+            time.sleep(0.001) # yield
 
             # Python sleep, sleep timer is offline
             self.__log.error("Sleep timer failed to shut tower down. " + \
-                "Calling Python's time.sleep for %i seconds", to_sleep)
-            time.sleep(to_sleep)
+                "Calling Python's time.sleep instead...")
+            available_sleep_time = self.seconds_until(self.nearest_ens_time) - \
+                                    self.config.execute_buffer
+            time.sleep(available_sleep_time)
 
         else:
             # if not enough time, call Python sleep for full time
@@ -376,6 +363,34 @@ class Sleep(State):
 
         self.__log.info("Changing state to CheckTime")
         return CheckTime.get_singleton()
+
+    def seconds_until(self, target: dt.time) -> int:
+        '''
+        Calculate seconds from the current time before the target time.
+
+        @param target: time for which we want to calculate the seconds from now
+        returns:
+            int: number of seconds until the target time
+        '''
+
+        now = dt.datetime.now()
+
+        if target.time() < now.time():
+            self.__log.info("Last ensemble finished, index reset; " + \
+                            "next ens is on next day")
+            max_today = dt.datetime.combine(dt.date.today(), dt.time.max)
+            to_target = dt.timedelta(hours=target.hour,
+                                    minutes=target.minute,
+                                    seconds=target.second)
+
+            left_today = max_today - now
+            sec_until = (left_today + to_target).total_seconds()
+        else:
+            self.__log.info("Current time less than next ens; " + \
+                            "next ens is on same day")
+            sec_until = (target - now).total_seconds()
+
+        return sec_until
 
 
 class StateMachine:
