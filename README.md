@@ -47,14 +47,11 @@ With each item being of the correct type:
 - interval (seconds between iterations): int
 
 ### Useable File Format
-The initial file of ensembles is meant to be easy to write but is annoying
-to program around. We provide the `convertToActive.py` to convert the
-initial format into the `active_ensembles.json` file that the scheduler
-can use.
+The initial file of ensembles is meant to be easy to write but is annoying to program around. We provide the `convertToActive.py` to convert the initial format into the `active_ensembles.json` file that the scheduler can use. You may also choose a name other than `active_ensembles.json` with the optional `fileout` argument.
 
 It can be found in the `TowerScheduler` directory. Use it like this:
 ```
-python convertToActive.py input_file.json
+python convertToActive.py input_file.json --fileout optional_file.json
 ```
 
 The script always outputs to `active_ensembles.json`. Be careful since it will overwrite a previous active ensembles file.
@@ -62,12 +59,12 @@ The script always outputs to `active_ensembles.json`. Be careful since it will o
 ## Usage
 Once you have a proper `active_ensembles.json` file, start the scheduler with:
 ```
-python scheduler.py active_ensembles.json
+python scheduler.py
 ```
 
-You may optionally provide a file with a different name, so long as it is formatted properly:
+If you want to use a file other than `active_ensembles.json`, you may specify this other file with the `--file` argument:
 ```
-python scheduler.py path_to_file/some_other_ensembles.json
+python scheduler.py --file path_to_file/ensemble_file.json
 ```
 
 ## Testing
