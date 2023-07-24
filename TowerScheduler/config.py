@@ -23,14 +23,9 @@ class Configuration:
 
         self.__log_level: int = 20
 
-    @classmethod
-    def get_singleton(cls, config_path: Path) -> Configuration:
-        if Configuration.singleton is None:
-            Configuration.singleton = Configuration(config_path)
-            Configuration.singleton.load()
-        return Configuration.singleton
+        self.load()
 
-    def __create_dict(self):
+    def to_dict(self):
         return {
             "Sleep": {
                 'wakeup_time': self.__wakeup_time,
@@ -47,7 +42,7 @@ class Configuration:
         Loads the configuration from the specified file
         """
         parser = ConfigParser()
-        parser.read_dict(self.__create_dict())
+        parser.read_dict(self.to_dict())
         parser.read(self.__config_path.as_posix())
 
         self.__wakeup_time = parser['Sleep'].getint('wakeup_time')
@@ -61,7 +56,7 @@ class Configuration:
         Writes the configuration to the file
         """
         parser = ConfigParser()
-        parser.read_dict(self.__create_dict())
+        parser.read_dict(self.to_dict())
         with open(self.__config_path, 'w', encoding='ascii') as handle:
             parser.write(handle)
 

@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 '''
 This module contains our scheduler's state machine and associated states.
 Running the machine results in repeatedly executing the current state's process
@@ -18,8 +17,8 @@ import time
 from enum import Enum
 from pathlib import Path
 
-from ensemble import Ensemble
-from TowerScheduler.config import Configuration
+from TowerScheduler.config import Configuration, get_instance
+from TowerScheduler.ensemble import Ensemble
 
 
 class CheckTimePath(Enum):
@@ -87,10 +86,10 @@ class WakeUp(State):
     have a file we can run and then passes control to CheckTime.
     '''
 
-    singleton = None
+    singleton: Wakeup = None
 
     def __init__(self):
-        self.config = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.config = get_instance(Path('schedulerConfig.ini'))
         self.logger = get_logger("Wake Up State", self.config.log_level)
 
     @classmethod
@@ -131,11 +130,11 @@ class CheckTime(State):
     run an ensemble, or sleep until the next ensemble.
     '''
 
-    singleton = None
+    singleton: CheckTime = None
 
     def __init__(self):
         self.check_time_ctrl = CheckTimePath.SKIP
-        self.config = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.config = get_instance(Path('schedulerConfig.ini'))
         self.logger = get_logger("Check Time State", self.config.log_level)
 
         self.ctrl_to_state = {
@@ -216,10 +215,10 @@ class Iterate(State):
     Iterate just increases the index by one, then passes back to CheckTime
     '''
 
-    singleton = None
+    singleton: Iterate = None
 
     def __init__(self):
-        self.config = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.config = get_instance(Path('schedulerConfig.ini'))
         self.logger = get_logger("Iterate State", self.config.log_level)
 
     @classmethod
@@ -243,10 +242,10 @@ class PerformEnsemble(State):
     and then passes to Iterate
     '''
 
-    singleton = None
+    singleton: PerformEnsemble = None
 
     def __init__(self):
-        self.config = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.config = get_instance(Path('schedulerConfig.ini'))
         self.logger = get_logger("Perform Ensemble State",
                                 self.config.log_level)
 
@@ -282,11 +281,11 @@ class Sleep(State):
     sleep leads to CheckTime.
     '''
 
-    singleton = None
+    singleton: Sleep = None
 
     def __init__(self):
         self.nearest_ens_time: dt.time = None
-        self.config = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.config = get_instance(Path('schedulerConfig.ini'))
         self.logger = get_logger("Sleep State", self.config.log_level)
 
     @classmethod
@@ -375,7 +374,7 @@ class StateMachine:
                 ens_list: List[Ensemble],
                 sleep_func: Callable[[int], None] ):
 
-        self.config = Configuration.get_singleton(Path('schedulerConfig.ini'))
+        self.config = get_instance(Path('schedulerConfig.ini'))
         self.logger = get_logger("State Machine", self.config.log_level)
 
         # State machine's data on ensemble schedule: list and next to execute

@@ -60,10 +60,14 @@ python convertToActive.py input_file.json
 The script always outputs to `active_ensembles.json`. Be careful since it will overwrite a previous active ensembles file.
 
 ## Usage
-Once you have a proper `active_ensembles.json` file in the same directory
-as the scheduler, start it with:
+Once you have a proper `active_ensembles.json` file, start the scheduler with:
 ```
-python scheduler.py
+python scheduler.py active_ensembles.json
+```
+
+You may optionally provide a file with a different name, so long as it is formatted properly:
+```
+python scheduler.py path_to_file/some_other_ensembles.json
 ```
 
 ## Testing

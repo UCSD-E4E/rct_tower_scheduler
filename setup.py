@@ -7,7 +7,7 @@ setup(
     name='RCTTowerScheduler',
     version='0.0.0.1',
     author='UCSD Engineers for Exploration',
-    author_email='e4e@eng.ucsd.edu',
+    author_email='e4e@ucsd.edu',
     entry_points={
         'console_scripts': [
             'convertToActive = TowerScheduler.convertToActive:main',
@@ -17,6 +17,7 @@ setup(
     },
     packages=find_packages(),
     install_requires=[
+        'argparse',
         'configparser',
         'datetime',
         'enum',
@@ -24,14 +25,11 @@ setup(
         'multiprocessing',
         'os',
         'pathlib',
+        'schema',
         'signal',
         'typing'
     ],
     extras_require={
-        'convertToActive': [
-            'argparse',
-            'schema'
-        ],
         'dev': [
             'pytest',
             'coverage',

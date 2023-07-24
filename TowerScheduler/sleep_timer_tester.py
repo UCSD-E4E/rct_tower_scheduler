@@ -1,4 +1,3 @@
-#!/usr/bin/python3
 '''
 Module to facilitate testing the sleep timer scheduler found in scheduler.py.
 This includes a mock SleepTimer class and a main loop to fork a new process

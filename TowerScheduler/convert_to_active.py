@@ -11,8 +11,8 @@ import argparse
 import datetime as dt
 import json
 from pathlib import Path
-
 from schema import Regex, Schema
+
 
 LAST_SEC_OF_DAY = 86399
 
@@ -30,15 +30,20 @@ ensemble_schema = Schema(
     }
 )
 
-def main(filein: Path = "ensembles.json"):
+
+def main():
     """
     Read the ensembles file, enumerate all ensembles and iterations,
-    sort them, then write them into active_ensembles.json
-
-    @param filein: Path to the schedule to be converted to active_ensembles
+    sort them, then write them into active_ensembles.json.
     """
 
-    with open(filein, "r", encoding="utf-8") as f_in:
+    # check for input file argument
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filein', type=Path)
+    parser.add_argument('--fileout', type=Path, required=False, default='active_ensembles.json')
+    args = parser.parse_args()
+
+    with open(args.filein, "r", encoding="utf-8") as f_in:
         ens = json.load(f_in)
     ensemble_schema.validate(ens)
 
@@ -59,17 +64,6 @@ def main(filein: Path = "ensembles.json"):
                     "start_time":  str(this_iteration_time) }
             ens_list.append(curr_obj)
 
-    '''
-    # create an extra object for teardown function
-    teardown_obj = {
-        "title": "teardown",
-        "function": "teardown",
-        "start_time": LAST_SEC_OF_DAY
-    }
-
-    ens_list.append(teardown_obj)
-    '''
-
     # sort all the enumerated ensembles by time
     ens_list.sort(key=lambda ens:ens['start_time'])
 
@@ -80,13 +74,8 @@ def main(filein: Path = "ensembles.json"):
     }
 
     # open/create file in overwrite mode
-    with open("active_ensembles.json", "w", encoding="utf-8") as f_out:
+    with open(args.fileout, "w", encoding="utf-8") as f_out:
         f_out.write(json.dumps(json_file, indent=4))
 
 if __name__ == "__main__":
-    # check for input file argument
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file', type=Path)
-    args = parser.parse_args()
-
-    main(args.file)
+    main()
