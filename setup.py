@@ -17,17 +17,7 @@ setup(
     },
     packages=find_packages(),
     install_requires=[
-        'argparse',
-        'configparser',
-        'datetime',
-        'enum',
-        'json',
-        'multiprocessing',
-        'os',
-        'pathlib',
         'schema',
-        'signal',
-        'typing'
     ],
     extras_require={
         'dev': [
