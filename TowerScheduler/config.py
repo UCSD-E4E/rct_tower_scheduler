@@ -12,7 +12,7 @@ class Configuration:
     Configuration file interface object
     """
 
-    singleton = None
+    default_path = None
 
     def __init__(self, config_path: Path) -> None:
         self.__config_path = config_path

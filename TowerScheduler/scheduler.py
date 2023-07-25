@@ -22,9 +22,6 @@ from TowerScheduler.config import Configuration, get_instance
 from TowerScheduler.ensemble import Ensemble
 
 
-CONFIG_FILE = Path('schedulerConfig.ini')
-
-
 class CheckTimePath(Enum):
     '''
     Path to take from CheckTime state
@@ -112,7 +109,7 @@ class WakeUp(State):
     singleton: Wakeup = None
 
     def __init__(self):
-        self.config = get_instance(CONFIG_FILE)
+        self.config = get_instance(Configuration.default_path)
         self.__log = get_logger("Wake Up State", self.config.log_level)
 
     @classmethod
@@ -157,7 +154,7 @@ class CheckTime(State):
 
     def __init__(self):
         self.check_time_ctrl = CheckTimePath.SKIP
-        self.config = get_instance(CONFIG_FILE)
+        self.config = get_instance(Configuration.default_path)
         self.__log = get_logger("Check Time State", self.config.log_level)
 
         self.ctrl_to_state = {
@@ -239,7 +236,7 @@ class Iterate(State):
     singleton: Iterate = None
 
     def __init__(self):
-        self.config = get_instance(CONFIG_FILE)
+        self.config = get_instance(Configuration.default_path)
         self.__log = get_logger("Iterate State", self.config.log_level)
 
     @classmethod
@@ -266,7 +263,7 @@ class PerformEnsemble(State):
     singleton: PerformEnsemble = None
 
     def __init__(self):
-        self.config = get_instance(CONFIG_FILE)
+        self.config = get_instance(Configuration.default_path)
         self.__log = get_logger("Perform Ensemble State", self.config.log_level)
 
     @classmethod
@@ -304,7 +301,7 @@ class Sleep(State):
 
     def __init__(self):
         self.nearest_ens_time: dt.time = None
-        self.config = get_instance(CONFIG_FILE)
+        self.config = get_instance(Configuration.default_path)
         self.__log = get_logger("Sleep State", self.config.log_level)
 
     @classmethod
@@ -403,7 +400,7 @@ class StateMachine:
                 ens_list: List[Ensemble],
                 sleep_func: Callable[[int], None] ):
 
-        self.config = get_instance(CONFIG_FILE)
+        self.config = get_instance(Configuration.default_path)
         self.__log = get_logger("State Machine", self.config.log_level)
 
         # State machine's data on ensemble schedule: list and next to execute
@@ -453,7 +450,10 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=Path, default='active_ensembles.json')
     parser.add_argument('--reset', type=bool, default=False)
+    parser.add_argument('--config', type=Path, default='schedulerConfig.ini')
     args = parser.parse_args()
+
+    Configuration.default_path = args.config
 
     try:
         ens_list = Ensemble.list_from_json(args.file)
