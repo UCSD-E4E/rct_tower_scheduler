@@ -8,11 +8,11 @@ time.
 '''
 
 import argparse
+import datetime as dt
 import json
 from pathlib import Path
-
 from schema import Regex, Schema
-from util import hms_to_seconds
+
 
 LAST_SEC_OF_DAY = 86399
 
@@ -21,12 +21,8 @@ ensemble_schema = Schema(
         "ensemble_list": [
             {
                 "title": str,
-                "function": Regex(r'^((\w)+\/)*\w+:\w+$'),
-                "start_time": {
-                    "hour": int,
-                    "minute": int,
-                    "second": int
-                },
+                "function": Regex(r'^((\w)+.)*\w+:\w+$'),
+                "start_time": Regex(r'^[0-9][0-9]:[0-9][0-9]:[0-9][0-9]$'),
                 "iterations": int,
                 "interval": int
             }
@@ -34,15 +30,20 @@ ensemble_schema = Schema(
     }
 )
 
-def main(filein: Path):
+
+def main():
     """
     Read the ensembles file, enumerate all ensembles and iterations,
-    sort them, then write them into active_ensembles.json
-
-    @param filein: Path to the schedule to be converted to active_ensembles
+    sort them, then write them into active_ensembles.json.
     """
 
-    with open(filein, "r", encoding="utf-8") as f_in:
+    # check for input file argument
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filein', type=Path)
+    parser.add_argument('--fileout', type=Path, required=False, default='active_ensembles.json')
+    args = parser.parse_args()
+
+    with open(args.filein, "r", encoding="utf-8") as f_in:
         ens = json.load(f_in)
     ensemble_schema.validate(ens)
 
@@ -50,46 +51,30 @@ def main(filein: Path):
     json_file = []
     # double loop adds all ensembles and their iterations to a list
     for func in ens["ensemble_list"]:
-        curr_hour = func["start_time"]["hour"]
-        curr_min = func["start_time"]["minute"]
-        curr_sec = func["start_time"]["second"]
-        timestamp = hms_to_seconds(curr_hour, curr_min, curr_sec)
+        start_time = dt.time.fromisoformat(func["start_time"])
 
         for j in range(func["iterations"]):
-            interval_sec = func["interval"]
+            interval_sec = dt.timedelta(seconds=func["interval"])
+
+            this_iteration_time = (dt.datetime.combine(dt.date.today(), start_time) + \
+                interval_sec * j).time()
+
             curr_obj = { "title": func["title"],
                     "function": func["function"],
-                    "start_time": timestamp + interval_sec * j }
+                    "start_time":  str(this_iteration_time) }
             ens_list.append(curr_obj)
-
-    '''
-    # create an extra object for teardown function
-    teardown_obj = {
-        "title": "teardown",
-        "function": "teardown",
-        "start_time": LAST_SEC_OF_DAY
-    }
-
-    ens_list.append(teardown_obj)
-    '''
 
     # sort all the enumerated ensembles by time
     ens_list.sort(key=lambda ens:ens['start_time'])
 
     # data that will become our json file format
     json_file = {
-        "ensemble_list": ens_list,
-        "next_ensemble": 0
+        "ensemble_list": ens_list
     }
 
     # open/create file in overwrite mode
-    with open("active_ensembles.json", "w", encoding="utf-8") as f_out:
+    with open(args.fileout, "w", encoding="utf-8") as f_out:
         f_out.write(json.dumps(json_file, indent=4))
 
 if __name__ == "__main__":
-    # check for input file argument
-    parser = argparse.ArgumentParser()
-    parser.add_argument('file', type=Path)
-    args = parser.parse_args()
-
-    main(args.file)
+    main()

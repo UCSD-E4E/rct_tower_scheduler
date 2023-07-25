@@ -29,11 +29,7 @@ Functions to perform should be stored in the following json format:
     {
             "title": "print",
             "function": "path_to_module.module:function_name",
-            "start_time": {
-                "hour": 8,
-                "minute": 0,
-                "second": 30
-            },
+            "start_time": "hh:mm:ss",
             "iterations": 5,
             "interval": 60
         }
@@ -43,37 +39,37 @@ Functions to perform should be stored in the following json format:
 ```
 With each item being of the correct type:
 - function: period-delimited path to a callable function followed by function name, separated by a colon; function cannot take arguments
-- starting time:
-  - hour: hour at which to start [0, 23]
-  - minute: minute at which to start [0, 59]
-  - second: second at which to start [0, 59]
+- starting time: colon-separated string containing hour, minute, and second at which to start:
+  - hh two-digit hour in range [00, 23]
+  - mm two-digit minute in range [00, 59]
+  - ss two-digit second in range [00, 59]
 - iterations: int
 - interval (seconds between iterations): int
 
 ### Useable File Format
-The initial file of ensembles is meant to be easy to write but is annoying
-to program around. We provide the `convertToActive.py` to convert the
-initial format into the `active_ensembles.json` file that the scheduler
-can use.
+The initial file of ensembles is meant to be easy to write but is annoying to program around. We provide the `convertToActive.py` to convert the initial format into the `active_ensembles.json` file that the scheduler can use. You may also choose a name other than `active_ensembles.json` with the optional `fileout` argument.
 
 It can be found in the `TowerScheduler` directory. Use it like this:
 ```
-python convertToActive.py input_file.json
+python convertToActive.py input_file.json --fileout optional_file.json
 ```
 
-The script uses input file `dummy_ensembles.json` by default and always outputs
-to `active_ensembles.json`. Be careful since it will overwrite a previous
-active ensembles file.
+The script always outputs to `active_ensembles.json`. Be careful since it will overwrite a previous active ensembles file.
 
 ## Usage
-Once you have a proper `active_ensembles.json` file in the same directory
-as the scheduler, start it with:
+Once you have a proper `active_ensembles.json` file, start the scheduler with:
 ```
 python scheduler.py
 ```
 
+If you want to use a file other than `active_ensembles.json`, you may specify this other file with the `--file` argument. You may also ensure the scheduler starts from the first ensemble of the day with the `--reset` option. Both of these options are used as follows:
+```
+python scheduler.py --file path_to_file/ensemble_file.json --reset True
+```
+
 ## Testing
-- `dummy_ensembles.json` is provided as an example initial file
+- an example `ensembles.json` is provided
+- convert desired ensemble schedule to active_ensembles.json as described above
 - start the scheduler as above to run it
 
 ## Outline

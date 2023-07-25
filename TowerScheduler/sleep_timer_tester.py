@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 '''
 Module to facilitate testing the sleep timer scheduler found in scheduler.py.
 This includes a mock SleepTimer class and a main loop to fork a new process
@@ -21,6 +19,7 @@ import sys
 import time
 from multiprocessing import shared_memory
 
+from ensemble import Ensemble
 from scheduler import StateMachine
 
 
@@ -30,8 +29,8 @@ class SleepTimerTester:
     function may be passed in to initialize a StateMachine in scheduler.py.
     '''
     def __init__(self):
-        self.starttime_memory = None
-        self.sleeptime_memory = None
+        self.starttime_memory: shared_memory.SharedMemory = None
+        self.sleeptime_memory: shared_memory.SharedMemory = None
 
     def sleep(self, sec: int):
         '''
@@ -43,7 +42,7 @@ class SleepTimerTester:
         assert self.sleeptime_memory is not None
         assert self.starttime_memory is not None
 
-        self.sleeptime_memory.buf[:] = sec.to_bytes(4, "big")
+        self.sleeptime_memory.buf[:] = int(sec).to_bytes(4, "big")
         self.starttime_memory.buf[:] = int(time.time()).to_bytes(8, "big")
 
     def set_sleeptime_memory(self, memory: shared_memory.SharedMemory):
@@ -61,6 +60,7 @@ class SleepTimerTester:
         @param memory: SharedMemory with a size of 8 bytes (to store one long)
         '''
         self.starttime_memory = memory
+
 
 def main():
     logger = logging.getLogger("sleep_timer_tester")
@@ -95,8 +95,8 @@ def main():
             new_pid = os.fork()
             if new_pid == 0:
                 # run scheduler.py
-                scheduler = StateMachine()
-                scheduler.sleep_timer = sleep_timer
+                ens_list = Ensemble.list_from_json("active_ensembles.json")
+                scheduler = StateMachine(ens_list, sleep_timer.sleep)
                 scheduler.wakeup_time = wakeup
                 scheduler.shutdown_time = shutdown
 
@@ -120,7 +120,7 @@ def main():
 
                 # sleep on daemon before rerunning scheduler in next iteration
                 logger.info("sleeping for %i seconds",
-                            str(int.from_bytes(sleeptime_memory.buf[:], "big")))
+                            int.from_bytes(sleeptime_memory.buf[:], "big"))
                 time.sleep(int.from_bytes(sleeptime_memory.buf[:], "big"))
                 starttime = time.time()
                 sleeptime_memory.buf[:] = int(0).to_bytes(4, "big")
