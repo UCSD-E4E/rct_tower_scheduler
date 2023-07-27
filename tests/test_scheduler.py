@@ -1,13 +1,19 @@
 import pytest
 import time
+from pathlib import Path
+
+from TowerScheduler.config import Configuration
 from TowerScheduler.ensemble import Ensemble
 from TowerScheduler.scheduler import  CheckTimePath, StateMachine, \
                 WakeUp, CheckTime, Iterate, PerformEnsemble, Sleep
 
+
 @pytest.fixture(name='state_machine')
 def setup_test():
+    Configuration.default_path = Path('testConfig.ini')
     ens_list = Ensemble.list_from_json("active_ensembles.json")
     return StateMachine(ens_list, time.sleep)
+
 
 def test_wakeup_transition(state_machine):
     state_machine.curr_state = WakeUp.get_singleton()
