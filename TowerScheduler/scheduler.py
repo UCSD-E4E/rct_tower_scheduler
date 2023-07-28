@@ -121,8 +121,11 @@ class WakeUp(State):
     def process(self, state_machine):
         self.__log.info("Running WakeUp process func")
 
-        with open("current_ensemble.json", "r", encoding="utf-8") as f_in:
-            ens_json = json.load(f_in)
+        try:
+            with open("current_ensemble.json", "r", encoding="utf-8") as f_in:
+                ens_json = json.load(f_in)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            ens_json = { "next_ensemble": 0 }
 
         state_machine.ens_index = ens_json["next_ensemble"]
 
