@@ -1,0 +1,29 @@
+@startuml
+hide empty description
+
+WakeUp: Begin scheduler execution
+CheckTime: Determine what to do based on
+CheckTime: current time and next ensemble time
+Iterate: Advance to next ensemble
+PerformEnsemble: Perform the current ensemble
+Sleep: Either send command to sleep timer
+Sleep: to shut tower down or call
+Sleep: time.sleep for shorter waits
+
+[*] --> WakeUp
+WakeUp--> CheckTime
+
+state c1 <<choice>>
+state c2 <<choice>>
+
+CheckTime--> c1
+c1--> Iterate : [missed ens]
+c1--> PerformEnsemble : [time for ens]
+c1--> Sleep : [must wait for ens]
+
+Iterate--> CheckTime
+PerformEnsemble--> CheckTime
+Sleep--> c2
+c2--> CheckTime : [Python sleep]
+c2--> [*] : [sleep timer sleep]
+@enduml
