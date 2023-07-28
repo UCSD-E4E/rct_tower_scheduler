@@ -121,8 +121,18 @@ class WakeUp(State):
     def process(self, state_machine):
         self.__log.info("Running WakeUp process func")
 
-        with open("current_ensemble.json", "r", encoding="utf-8") as f_in:
-            ens_json = json.load(f_in)
+        try:
+            with open("current_ensemble.json", encoding="utf-8") as f_in:
+                ens_json = json.load(f_in)
+        except json.decoder.JSONDecodeError: # corrupted, restore from backup
+            self.__log.warning("Current ensemble file corrupted, reading from" \
+                                + " backup file.")
+            with open("current_ensemble_backup.json", encoding="utf-8") as f_in:
+                ens_json = json.load(f_in)
+        except FileNotFoundError:
+            self.__log.warning("No current ensemble file found, starting from" \
+                                + " beginning of schedule.")
+            ens_json = { "next_ensemble": 0 }
 
         state_machine.ens_index = ens_json["next_ensemble"]
 
@@ -313,7 +323,13 @@ class Sleep(State):
     def process(self, state_machine):
         self.__log.info("Running Sleep process func")
 
-        # write curr index to ens file before calcs
+        # write curr index to backup file
+        with open("current_ensemble_backup.json", "w", encoding="utf-8") as f_out:
+            json_file = {
+                "next_ensemble": state_machine.ens_index
+            }
+            json.dump(json_file, f_out, indent=4)
+        # write curr index to normal file once backup is successful
         with open("current_ensemble.json", "w", encoding="utf-8") as f_out:
             json_file = {
                 "next_ensemble": state_machine.ens_index

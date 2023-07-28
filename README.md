@@ -80,6 +80,3 @@ Optional arguments:
 5.	Perform calculations to find sleep duration given current time, time at which to perform next ensemble, and wakeup and shutdown times
 6.	Save next ensemble to disk to indicate what comes next
 7.	Send sleep command to sleep timer
-
-## State Machine Diagram
-![State machine diagram.](state_machine.png "This is our state machine.")
