@@ -11,7 +11,6 @@ simulate an entire tower, controlled by a sleep timer to start execution of the
 scheduler and kill the scheduler's process when sleep() is called.
 '''
 
-import logging
 import math
 import os
 import signal
@@ -19,8 +18,9 @@ import sys
 import time
 from multiprocessing import shared_memory
 
-from ensemble import Ensemble
-from scheduler import StateMachine
+from TowerScheduler.ensemble import Ensemble
+from TowerScheduler.scheduler import StateMachine
+from TowerScheduler.util import get_logger
 
 
 class SleepTimerTester:
@@ -63,13 +63,11 @@ class SleepTimerTester:
 
 
 def main():
-    logger = logging.getLogger("sleep_timer_tester")
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setLevel(logging.INFO)
-    formatter = logging.Formatter('%(levelname)s: %(name)s: %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--file', type=Path, default='active_ensembles.json')
+    args = parser.parse_args()
+
+    get_logger("sleep_timer_tester", level=50)
 
     sleep_timer = SleepTimerTester()
 
@@ -95,7 +93,7 @@ def main():
             new_pid = os.fork()
             if new_pid == 0:
                 # run scheduler.py
-                ens_list = Ensemble.list_from_json("active_ensembles.json")
+                ens_list = Ensemble.list_from_json(args.file)
                 scheduler = StateMachine(ens_list, sleep_timer.sleep)
                 scheduler.wakeup_time = wakeup
                 scheduler.shutdown_time = shutdown
@@ -126,12 +124,12 @@ def main():
                 sleeptime_memory.buf[:] = int(0).to_bytes(4, "big")
 
     except KeyboardInterrupt:
-        if new_pid > 0:
+        os.kill(new_pid, signal.SIGKILL)
+        sleeptime_memory.close()
+        starttime_memory.close()
+        if new_pid > 0: # only unlink SharedMemory once
             print("") # nicer formatting when just printing to terminal
             logger.info("received interrupt from user, exiting now...")
-            os.kill(new_pid, signal.SIGKILL)
-            sleeptime_memory.close()
-            starttime_memory.close()
             sleeptime_memory.unlink()
             starttime_memory.unlink()
 

@@ -12,7 +12,6 @@ import abc
 import argparse
 import datetime as dt
 import json
-import logging
 import sys
 import time
 from enum import Enum
@@ -20,6 +19,7 @@ from pathlib import Path
 
 from TowerScheduler.config import Configuration, get_instance
 from TowerScheduler.ensemble import Ensemble
+from TowerScheduler.util import get_logger
 
 
 class CheckTimePath(Enum):
@@ -36,27 +36,6 @@ class CheckTimePath(Enum):
     RUN = 1
     WAIT = 2
     RESET = 3
-
-
-__handler = logging.StreamHandler(sys.stdout)
-__handler.setLevel(logging.DEBUG)
-__formatter = logging.Formatter(
-        '%(levelname)s: %(name)s: %(message)s')
-__handler.setFormatter(__formatter)
-def get_logger(name: str, level: int=logging.INFO) -> logging.Logger:
-    '''
-    Return a logger with the specified name and logging level, using a
-    predefined handler.
-
-    @param name: Name of the logger to return
-    @param level: The level at which the set the returned logger
-    returns:
-        logging.Logger: Logger with the specified name and level
-    '''
-    logger = logging.getLogger(name)
-    logger.setLevel(level)
-    logger.addHandler(__handler)
-    return logger
 
 
 class State(abc.ABC):
@@ -449,7 +428,6 @@ class StateMachine:
 
 
 def main():
-    # check for input file argument
     parser = argparse.ArgumentParser()
     parser.add_argument('--file', type=Path, default='active_ensembles.json')
     parser.add_argument('--reset', type=bool, default=False)
