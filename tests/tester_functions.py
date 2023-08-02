@@ -15,5 +15,8 @@ def add_this():
 def subtract_this():
     print("x - y")
 
-def multiply_this():
-    print("x * y")
+def return_5():
+    return 5
+
+def takes_args(x: int):
+    print(x)

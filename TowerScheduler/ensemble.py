@@ -62,6 +62,20 @@ class Ensemble:
 
         return ens_dict
 
+    def matches(self, other) -> boolean:
+        '''
+        Test whether this Ensemble's data matches that of another Ensemble.
+
+        @param other: Other Ensemble with which we want to match this one
+        Returns:
+            boolean: True if Ensembles' fields are identical, else False
+        '''
+
+        return (self.title == other.title and
+                self.module_name == other.module_name and
+                self.function_name == other.function_name and
+                self.start_time == other.start_time)
+
     @classmethod
     def list_from_json(cls, file: Path) -> List[Ensemble]:
         '''
@@ -116,7 +130,7 @@ class Ensemble:
         spec.loader.exec_module(module)
         function = getattr(module, self.function_name)
 
-        function()
+        return function()
 
     def validate(self):
         '''
@@ -130,20 +144,22 @@ class Ensemble:
 
         try:
             spec = importlib.util.find_spec(self.module_name)
+            if spec is None:
+                return False
             module = importlib.util.module_from_spec(spec)
         except ModuleNotFoundError:
             return False
 
-        if module is not None:
-            spec.loader.exec_module(module)
-            try:
-                func = getattr(module, self.function_name)
-            except AttributeError:
-                return False
-
-            args = inspect.getfullargspec(func).args
-            func_takes_no_args = (args == [])
-        else:
+        if module is None:
             return False
+
+        spec.loader.exec_module(module)
+        try:
+            func = getattr(module, self.function_name)
+        except AttributeError:
+            return False
+
+        args = inspect.getfullargspec(func).args
+        func_takes_no_args = (args == [])
 
         return valid_start and func_takes_no_args

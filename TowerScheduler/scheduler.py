@@ -361,8 +361,8 @@ class Sleep(State):
                     available_sleep_time)
             time.sleep(available_sleep_time)
 
-        self.__log.info("Changing state to CheckTime")
-        return CheckTime.get_singleton()
+        self.__log.info("Changing state to WakeUp")
+        return WakeUp.get_singleton()
 
     def seconds_until(self, target: dt.time) -> int:
         '''

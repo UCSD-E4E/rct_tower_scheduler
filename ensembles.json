@@ -22,13 +22,6 @@
       "interval": 60
     },
     {
-      "title": "alpha1",
-      "function": "tests.tester_functions:multiply_this",
-      "start_time": "12:45:00",
-      "iterations": 5,
-      "interval": 60
-    },
-    {
       "title": "dummy2",
       "function": "tests.tester_functions:print_this",
       "start_time": "18:00:00",
