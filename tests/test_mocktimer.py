@@ -23,5 +23,5 @@ def test_sleep():
     # confirm that sleeping correctly sets our SharedMemory
     sleep_timer.sleep(to_sleep)
 
-    assert struct.unpack(">I", sleeptime_memory.buf[:])[0] == to_sleep
-    assert struct.unpack(">d", starttime_memory.buf[:])[0] > starttime
+    assert struct.unpack(">I", sleeptime_memory.buf[:4])[0] == to_sleep
+    assert struct.unpack(">d", starttime_memory.buf[:8])[0] > starttime
