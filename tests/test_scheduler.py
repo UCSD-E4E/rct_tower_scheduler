@@ -11,7 +11,7 @@ from TowerScheduler.scheduler import  CheckTimePath, StateMachine, \
 @pytest.fixture(name='state_machine')
 def setup_test():
     Configuration.default_path = Path('testConfig.ini')
-    ens_list = Ensemble.list_from_json("active_ensembles.json")
+    ens_list = Ensemble.list_from_json("tests/test_active_ensembles.json")
     return StateMachine(ens_list, time.sleep)
 
 def test_wakeup_to_check_time_transition(state_machine):

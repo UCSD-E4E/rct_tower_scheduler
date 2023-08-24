@@ -1,4 +1,5 @@
 import random
+import struct
 import time
 from multiprocessing import shared_memory
 
@@ -22,5 +23,5 @@ def test_sleep():
     # confirm that sleeping correctly sets our SharedMemory
     sleep_timer.sleep(to_sleep)
 
-    assert int.from_bytes(sleeptime_memory.buf[:], "big") == to_sleep
-    assert int.from_bytes(starttime_memory.buf[:], "big") > starttime
+    assert struct.unpack(">I", sleeptime_memory.buf[:])[0] == to_sleep
+    assert struct.unpack(">d", starttime_memory.buf[:])[0] > starttime

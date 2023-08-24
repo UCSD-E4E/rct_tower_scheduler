@@ -22,8 +22,8 @@ c1--> PerformEnsemble : [time for ens]
 c1--> Sleep : [must wait for ens]
 
 Iterate--> CheckTime
-PerformEnsemble--> CheckTime
+PerformEnsemble--> Iterate
 Sleep--> c2
-c2--> CheckTime : [Python sleep]
+c2--> WakeUp : [Python sleep]
 c2--> [*] : [sleep timer sleep]
 @enduml

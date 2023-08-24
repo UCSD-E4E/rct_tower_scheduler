@@ -1,0 +1,19 @@
+{
+    "ensemble_list": [
+        {
+            "title": "dummy1",
+            "function": "tests.tester_functions:subtract_this",
+            "start_time": "12:30:00"
+        },
+        {
+            "title": "dummy1",
+            "function": "tests.tester_functions:subtract_this",
+            "start_time": "12:31:00"
+        },
+        {
+            "title": "dummy1",
+            "function": "tests.tester_functions:subtract_this",
+            "start_time": "12:32:00"
+        }
+    ]
+}

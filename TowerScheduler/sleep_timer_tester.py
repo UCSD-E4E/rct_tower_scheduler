@@ -14,6 +14,7 @@ scheduler and kill the scheduler's process when sleep() is called.
 import math
 import os
 import signal
+import struct
 import sys
 import time
 from multiprocessing import shared_memory
@@ -42,8 +43,8 @@ class SleepTimerTester:
         assert self.sleeptime_memory is not None
         assert self.starttime_memory is not None
 
-        self.sleeptime_memory.buf[:] = int(sec).to_bytes(4, "big")
-        self.starttime_memory.buf[:] = int(time.time()).to_bytes(8, "big")
+        self.sleeptime_memory.buf[:] = struct.pack(">I", sec)
+        self.starttime_memory.buf[:] = struct.pack(">d", time.time())
 
     def set_sleeptime_memory(self, memory: shared_memory.SharedMemory):
         '''
@@ -103,25 +104,24 @@ def main():
                 logger.info("WAKEUP TIME: %i seconds", wakeup)
 
                 scheduler.run_machine()
-                #os.execl("./state_machine_design.py", "./state_machine_design.py")
             else:
                 # wait for command sleep(x)
-                while int.from_bytes(sleeptime_memory.buf[:], "big") == 0:
+                while struct.unpack(">I", sleeptime_memory.buf[:])[0] == 0:
                     time.sleep(1)
 
                 # shut down scheduler by killing child process running it
                 os.kill(new_pid, signal.SIGKILL)
-                starttime = int.from_bytes(starttime_memory.buf[:], "big")
+                startttime = struct.unpack(">d", starttime_memory.buf[:])[0]
                 endtime = time.time()
                 shutdown = max(math.ceil(endtime - starttime + buffer_time), shutdown)
                 logger.info("SHUTDOWN TIME: %i seconds", shutdown)
 
                 # sleep on daemon before rerunning scheduler in next iteration
                 logger.info("sleeping for %i seconds",
-                            int.from_bytes(sleeptime_memory.buf[:], "big"))
-                time.sleep(int.from_bytes(sleeptime_memory.buf[:], "big"))
+                            struct.unpack(">I", sleeptime_memory.buf[:])[0])
+                time.sleep(struct.unpack(">I", sleeptime_memory.buf[:])[0])
                 starttime = time.time()
-                sleeptime_memory.buf[:] = int(0).to_bytes(4, "big")
+                sleeptime_memory.buf[:] = struct.pack(">I", 0)
 
     except KeyboardInterrupt:
         os.kill(new_pid, signal.SIGKILL)
