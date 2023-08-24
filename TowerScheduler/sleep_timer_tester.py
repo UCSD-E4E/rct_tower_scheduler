@@ -43,8 +43,8 @@ class SleepTimerTester:
         assert self.sleeptime_memory is not None
         assert self.starttime_memory is not None
 
-        self.sleeptime_memory.buf[:] = struct.pack(">I", sec)
-        self.starttime_memory.buf[:] = struct.pack(">d", time.time())
+        self.sleeptime_memory.buf[:4] = struct.pack(">I", sec)
+        self.starttime_memory.buf[:8] = struct.pack(">d", time.time())
 
     def set_sleeptime_memory(self, memory: shared_memory.SharedMemory):
         '''
@@ -106,22 +106,22 @@ def main():
                 scheduler.run_machine()
             else:
                 # wait for command sleep(x)
-                while struct.unpack(">I", sleeptime_memory.buf[:])[0] == 0:
+                while struct.unpack(">I", sleeptime_memory.buf[:4])[0] == 0:
                     time.sleep(1)
 
                 # shut down scheduler by killing child process running it
                 os.kill(new_pid, signal.SIGKILL)
-                startttime = struct.unpack(">d", starttime_memory.buf[:])[0]
+                startttime = struct.unpack(">d", starttime_memory.buf[:8])[0]
                 endtime = time.time()
                 shutdown = max(math.ceil(endtime - starttime + buffer_time), shutdown)
                 logger.info("SHUTDOWN TIME: %i seconds", shutdown)
 
                 # sleep on daemon before rerunning scheduler in next iteration
                 logger.info("sleeping for %i seconds",
-                            struct.unpack(">I", sleeptime_memory.buf[:])[0])
-                time.sleep(struct.unpack(">I", sleeptime_memory.buf[:])[0])
+                            struct.unpack(">I", sleeptime_memory.buf[:4])[0])
+                time.sleep(struct.unpack(">I", sleeptime_memory.buf[:4])[0])
                 starttime = time.time()
-                sleeptime_memory.buf[:] = struct.pack(">I", 0)
+                sleeptime_memory.buf[:4] = struct.pack(">I", 0)
 
     except KeyboardInterrupt:
         os.kill(new_pid, signal.SIGKILL)

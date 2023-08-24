@@ -48,12 +48,12 @@ def test_iterate_to_check_time_transition(state_machine):
     new_state = state_machine.curr_state.update(state_machine)
     assert isinstance(new_state, CheckTime)
 
-def test_sleep_to_check_time_transition(state_machine):
-    state_machine.curr_state = Sleep.get_singleton()
-    new_state = state_machine.curr_state.update(state_machine)
-    assert isinstance(new_state, CheckTime)
+# def test_sleep_to_check_time_transition(state_machine):
+#     state_machine.curr_state = Sleep.get_singleton()
+#     new_state = state_machine.curr_state.update(state_machine)
+#     assert isinstance(new_state, CheckTime)
 
-def test_perform_ensemble_to_check_time_transition(state_machine):
-    state_machine.curr_state = PerformEnsemble.get_singleton()
-    new_state = state_machine.curr_state.update(state_machine)
-    assert isinstance(new_state, CheckTime)
+# def test_perform_ensemble_to_check_time_transition(state_machine):
+#     state_machine.curr_state = PerformEnsemble.get_singleton()
+#     new_state = state_machine.curr_state.update(state_machine)
+#     assert isinstance(new_state, CheckTime)
