@@ -117,7 +117,7 @@ class WakeUp(State):
                         ens.title, ens.start_time.isoformat())
                     raise AttributeError
 
-        now = dt.datetime.now()
+        now = state_machine.time_func()
 
         self.__log.info("Waking up at %s", now.isoformat())
 
@@ -170,7 +170,7 @@ class CheckTime(State):
             return
 
         # read time from ensemble and compare to current_time
-        now = dt.datetime.now()
+        now = state_machine.time_func()
         nearest_ens_time = curr_ens.start_time
 
         if nearest_ens_time < now.time():
@@ -198,7 +198,7 @@ class CheckTime(State):
 
         # if current_time is passed current_ensemble time, report error
         if self.check_time_ctrl == CheckTimePath.SKIP:
-            now = dt.datetime.now()
+            now = state_machine.time_func()
             curr_ensemble = state_machine.ens_list[state_machine.ens_index]
 
             self.__log.error("Skipping past missed ensemble: %s",
@@ -263,7 +263,7 @@ class PerformEnsemble(State):
 
         self.__log.info("Done performing %s", curr_ens.title)
 
-        now = dt.datetime.now()
+        now = state_machine.time_func()
         self.__log.info("Time is now %s", now.time().isoformat())
 
     def update(self, state_machine):
@@ -302,7 +302,7 @@ class Sleep(State):
             }
             json.dump(json_file, f_out, indent=4)
 
-        now = dt.datetime.now()
+        now = state_machine.time_func()
         self.nearest_ens_time = dt.datetime.combine(dt.date.today(),
                 state_machine.ens_list[state_machine.ens_index].start_time)
 
@@ -317,8 +317,8 @@ class Sleep(State):
 
         # recalc current_time, and subtract buffer from calculated available
         # time to give ourselves a safely early wakeup
-        available_sleep_time = self.seconds_until(self.nearest_ens_time) - \
-                                self.config.execute_buffer
+        available_sleep_time = self.seconds_until(self.nearest_ens_time,
+                    state_machine.time_func) - self.config.execute_buffer
 
         # if enough time, call shutdown
         if available_sleep_time > buffer:
@@ -330,8 +330,8 @@ class Sleep(State):
             # Python sleep, sleep timer is offline
             self.__log.error("Sleep timer failed to shut tower down. " + \
                 "Calling Python's time.sleep instead...")
-            available_sleep_time = self.seconds_until(self.nearest_ens_time) - \
-                                    self.config.execute_buffer
+            available_sleep_time = self.seconds_until(self.nearest_ens_time,
+                    state_machine.time_func) - self.config.execute_buffer
             time.sleep(available_sleep_time)
 
         else:
@@ -343,16 +343,18 @@ class Sleep(State):
         self.__log.info("Changing state to WakeUp")
         return WakeUp.get_singleton()
 
-    def seconds_until(self, target: dt.time) -> int:
+    def seconds_until(self, target: dt.time,
+                    time_func: Callable[[], dt.datetime]) -> int:
         '''
         Calculate seconds from the current time before the target time.
 
         @param target: time for which we want to calculate the seconds from now
+        @param time_func: time source
         returns:
             int: number of seconds until the target time
         '''
 
-        now = dt.datetime.now()
+        now = time_func()
 
         if target.time() < now.time():
             self.__log.info("Last ensemble finished, index reset; " + \
@@ -384,6 +386,7 @@ class StateMachine:
 
         self.config = get_instance(Configuration.default_path)
         self.__log = get_logger("State Machine", self.config.log_level)
+        self.time_func = dt.datetime.now
 
         # State machine's data on ensemble schedule: list and next to execute
         self.ens_list: List[Ensemble] = ens_list

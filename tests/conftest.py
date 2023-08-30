@@ -2,7 +2,7 @@ import datetime as dt
 import pytest
 import random
 import string
-from typing import Dict, List
+from typing import Callable, Dict, List
 
 
 NUM_TRIALS = 128
@@ -10,6 +10,19 @@ MAX_RANDOM_WORD_LENGTH = 16
 MAX_RANDOM_DIR_LENGTH = 8
 MAX_RANDOM_ENS_INTERVAL = 3600
 DEFAULT_ENS_ITERATIONS = 3
+
+def create_time_source(time=dt.datetime) -> Callable[[], dt.datetime]:
+    '''
+    Create a mocked time source which will always return the datetime passed in
+    to this function.
+
+    @param time: The time our mock will return
+    returns:
+        get_time, a Callable taking no arguments and returning our mocked time
+    '''
+    def get_time() -> dt.datetime:
+        return time
+    return get_time
 
 def get_random_function() -> str:
     '''

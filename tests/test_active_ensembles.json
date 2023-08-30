@@ -12,7 +12,7 @@
         },
         {
             "title": "dummy1",
-            "function": "tests.tester_functions:subtract_this",
+            "function": "tests.tester_functions:fake_func",
             "start_time": "12:32:00"
         }
     ]
