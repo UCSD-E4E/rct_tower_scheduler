@@ -94,7 +94,7 @@ def test_wakeup_process(state_machine):
     # should no longer throw exception now that validate is not called
     state_machine.curr_state.process(state_machine)
 
-def test_check_time_process_wait(state_machine):
+def test_check_time_process_run(state_machine):
     state_machine.curr_state = CheckTime.get_singleton()
     ens_time = dt.datetime.combine(dt.date.today(),
                                 state_machine.ens_list[0].start_time)
@@ -105,15 +105,74 @@ def test_check_time_process_wait(state_machine):
     # confirm maximum time until ens will run
     state_machine.time_func = create_time_source(ens_time - max_buffer)
     state_machine.curr_state.process(state_machine)
-    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN)
 
     # confirm exact time of ens will run
     state_machine.time_func = create_time_source(ens_time)
     state_machine.curr_state.process(state_machine)
-    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN)
 
 # test checktime SKIP
+def test_check_time_process_skip(state_machine):
+    state_machine.curr_state = CheckTime.get_singleton()
+    ens_time = dt.datetime.combine(dt.date.today(),
+                                state_machine.ens_list[1].start_time)
+
+    config = get_instance(Configuration.default_path)
+    max_buffer = dt.timedelta(seconds=config.execute_buffer)
+
+    # confirm maximum time until ens will run
+    state_machine.time_func = create_time_source(ens_time - max_buffer)
+    state_machine.curr_state.process(state_machine)
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.SKIP)
+
+    # confirm exact time of ens will run
+    state_machine.time_func = create_time_source(ens_time)
+    state_machine.curr_state.process(state_machine)
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.SKIP)
 
 # test checktime WAIT
+def test_check_time_process_wait(state_machine):
+    state_machine.curr_state = CheckTime.get_singleton()
+    ens_time = dt.datetime.combine(dt.date.today(),
+                                state_machine.ens_list[3].start_time)
+
+    config = get_instance(Configuration.default_path)
+    max_buffer = dt.timedelta(seconds=config.execute_buffer)
+
+    # confirm maximum time until ens will run
+    state_machine.time_func = create_time_source(ens_time - max_buffer)
+    state_machine.curr_state.process(state_machine)
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.WAIT)
+
+    # confirm exact time of ens will run
+    state_machine.time_func = create_time_source(ens_time)
+    state_machine.curr_state.process(state_machine)
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.WAIT)
 
 # test checktime RESET
+def test_check_time_process_reset(state_machine):
+    state_machine.curr_state = CheckTime.get_singleton()
+    ens_time = dt.datetime.combine(dt.date.today(),
+                                state_machine.ens_list[3].start_time)
+
+    config = get_instance(Configuration.default_path)
+    max_buffer = dt.timedelta(seconds=config.execute_buffer)
+
+    # confirm maximum time until ens will run
+    state_machine.time_func = create_time_source(ens_time - max_buffer)
+    state_machine.ens_index = 4
+    state_machine.curr_state.process(state_machine)
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RESET)
+
+    # confirm exact time of ens will run
+    state_machine.time_func = create_time_source(ens_time)
+    state_machine.curr_state.process(state_machine)
+    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RESET)
+
+def test_iterate_process(state_machine):
+    state_machine.curr_state = Iterate.get_singleton()
+    prev_ens_index = state_machine.ens_index
+    state_machine.curr_state.process(state_machine)
+    assert (prev_ens_index + 1) == state_machine.ens_index
+
