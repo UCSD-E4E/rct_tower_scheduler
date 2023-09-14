@@ -159,7 +159,7 @@ class CheckTime(State):
         if state_machine.ens_index >= len(state_machine.ens_list):
             self.__log.info("Index beyond last ens, resetting")
             self.check_time_ctrl = CheckTimePath.RESET
-            statete _machine.ens_index = 0
+            state_machine.ens_index = 0
             state_machine.daily_reset = True
             return
         curr_ens = state_machine.ens_list[state_machine.ens_index]
