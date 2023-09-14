@@ -156,18 +156,19 @@ class CheckTime(State):
         self.__log.info("Running CheckTime process func")
         self.__log.info("Current ens index = %i", state_machine.ens_index)
 
+        if state_machine.ens_index >= len(state_machine.ens_list):
+            self.__log.info("Index beyond last ens, resetting")
+            self.check_time_ctrl = CheckTimePath.RESET
+            statete _machine.ens_index = 0
+            state_machine.daily_reset = True
+            return
         curr_ens = state_machine.ens_list[state_machine.ens_index]
 
         # window where if the scheduler wakes up slightly early we allow the
         # scheduler to run the ensemble anyway if it wakes up slightly early
         time_buffer = dt.timedelta(seconds=self.config.execute_buffer)
 
-        if state_machine.ens_index >= len(state_machine.ens_list):
-            self.__log.info("Index beyond last ens, resetting")
-            self.check_time_ctrl = CheckTimePath.RESET
-            state_machine.ens_index = 0
-            state_machine.daily_reset = True
-            return
+        
 
         # read time from ensemble and compare to current_time
         now = state_machine.time_func()
