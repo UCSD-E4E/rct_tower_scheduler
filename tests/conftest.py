@@ -88,8 +88,9 @@ def scheduled_ensemble(request) -> Dict[str, str]:
     '''
     Create a dictionary containing data for a fake scheduled ensemble. Includes
     a randomized title, valid function string, and interval. Start time defaults
-    to the current time and iterations to DEFAULT_ENS_ITERATIONS.
+    to the current time and iterations to the value of the Fixture Request.
 
+    @param request (pytest.FixtureRequest): Fixture Request
     returns:
         Dict[str, str]: dictionary of constructed ensemble data
     '''

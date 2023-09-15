@@ -23,6 +23,7 @@ def setup_test():
     ens_list = Ensemble.list_from_json("tests/test_active_ensembles.json")
     return StateMachine(ens_list, time.sleep)
 
+
 def test_wakeup_to_check_time_transition(state_machine):
     state_machine.curr_state = WakeUp.get_singleton()
     new_state = state_machine.curr_state.update(state_machine)
@@ -105,74 +106,75 @@ def test_check_time_process_run(state_machine):
     # confirm maximum time until ens will run
     state_machine.time_func = create_time_source(ens_time - max_buffer)
     state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN)
+    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN
 
     # confirm exact time of ens will run
     state_machine.time_func = create_time_source(ens_time)
     state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN)
+    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.RUN
 
-# test checktime SKIP
 def test_check_time_process_skip(state_machine):
     state_machine.curr_state = CheckTime.get_singleton()
     ens_time = dt.datetime.combine(dt.date.today(),
-                                state_machine.ens_list[1].start_time)
+                                state_machine.ens_list[0].start_time)
 
-    config = get_instance(Configuration.default_path)
-    max_buffer = dt.timedelta(seconds=config.execute_buffer)
+    one_sec_difference = dt.timedelta(seconds=1)
 
-    # confirm maximum time until ens will run
-    state_machine.time_func = create_time_source(ens_time - max_buffer)
+    # confirm missed ens today is skipped
+    state_machine.time_func = create_time_source(ens_time + one_sec_difference)
     state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.SKIP)
+    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.SKIP
 
-    # confirm exact time of ens will run
-    state_machine.time_func = create_time_source(ens_time)
+    # confirm missed ens from previous day is skipped
+    state_machine.daily_reset = True
+    state_machine.day_of_ens = dt.date.today() + dt.timedelta(hours=24)
+    state_machine.time_func = create_time_source(ens_time + one_sec_difference)
     state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.SKIP)
+    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.SKIP
 
-# test checktime WAIT
 def test_check_time_process_wait(state_machine):
     state_machine.curr_state = CheckTime.get_singleton()
     ens_time = dt.datetime.combine(dt.date.today(),
-                                state_machine.ens_list[3].start_time)
+                                state_machine.ens_list[0].start_time)
 
     config = get_instance(Configuration.default_path)
     max_buffer = dt.timedelta(seconds=config.execute_buffer)
+    one_sec_difference = dt.timedelta(seconds=1)
 
-    # confirm maximum time until ens will run
-    state_machine.time_func = create_time_source(ens_time - max_buffer)
+    # confirm wait for ens later today
+    state_machine.time_func = create_time_source(ens_time - max_buffer - \
+                                                one_sec_difference)
     state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.WAIT)
+    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.WAIT
 
-    # confirm exact time of ens will run
-    state_machine.time_func = create_time_source(ens_time)
+    # confirm wait for ens tomorrow
+    state_machine.daily_reset = True
+    state_machine.time_func = create_time_source(ens_time + one_sec_difference)
     state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.WAIT)
+    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.WAIT
 
-# test checktime RESET
 def test_check_time_process_reset(state_machine):
     state_machine.curr_state = CheckTime.get_singleton()
-    ens_time = dt.datetime.combine(dt.date.today(),
-                                state_machine.ens_list[3].start_time)
 
-    config = get_instance(Configuration.default_path)
-    max_buffer = dt.timedelta(seconds=config.execute_buffer)
-
-    # confirm maximum time until ens will run
-    state_machine.time_func = create_time_source(ens_time - max_buffer)
-    state_machine.ens_index = 4
+    # confirm reset upon end of today's ensembles
+    state_machine.ens_index = len(state_machine.ens_list)
     state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RESET)
-
-    # confirm exact time of ens will run
-    state_machine.time_func = create_time_source(ens_time)
-    state_machine.curr_state.process(state_machine)
-    print(state_machine.curr_state.check_time_ctrl == CheckTimePath.RESET)
+    assert state_machine.curr_state.check_time_ctrl == CheckTimePath.RESET
 
 def test_iterate_process(state_machine):
     state_machine.curr_state = Iterate.get_singleton()
     prev_ens_index = state_machine.ens_index
     state_machine.curr_state.process(state_machine)
-    assert (prev_ens_index + 1) == state_machine.ens_index
+    assert state_machine.ens_index == (prev_ens_index + 1)
 
+def test_perform_ensemble_process(state_machine):
+    # TODO
+    assert False
+
+def test_sleep_process(state_machine):
+    # TODO
+    assert False
+
+def test_seconds_until():
+    # TODO
+    assert False

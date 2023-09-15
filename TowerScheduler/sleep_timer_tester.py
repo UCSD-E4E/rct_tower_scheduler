@@ -111,7 +111,7 @@ def main():
 
                 # shut down scheduler by killing child process running it
                 os.kill(new_pid, signal.SIGKILL)
-                startttime = struct.unpack(">d", starttime_memory.buf[:8])[0]
+                starttime = struct.unpack(">d", starttime_memory.buf[:8])[0]
                 endtime = time.time()
                 shutdown = max(math.ceil(endtime - starttime + buffer_time), shutdown)
                 logger.info("SHUTDOWN TIME: %i seconds", shutdown)
@@ -124,7 +124,6 @@ def main():
                 sleeptime_memory.buf[:4] = struct.pack(">I", 0)
 
     except KeyboardInterrupt:
-        os.kill(new_pid, signal.SIGKILL)
         sleeptime_memory.close()
         starttime_memory.close()
         if new_pid > 0: # only unlink SharedMemory once
@@ -132,6 +131,8 @@ def main():
             logger.info("received interrupt from user, exiting now...")
             sleeptime_memory.unlink()
             starttime_memory.unlink()
+        else: # only kill child process
+            os.kill(new_pid, signal.SIGKILL)
 
 if __name__ == '__main__':
     main()

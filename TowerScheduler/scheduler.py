@@ -162,13 +162,12 @@ class CheckTime(State):
             state_machine.ens_index = 0
             state_machine.daily_reset = True
             return
+            
         curr_ens = state_machine.ens_list[state_machine.ens_index]
 
         # window where if the scheduler wakes up slightly early we allow the
         # scheduler to run the ensemble anyway if it wakes up slightly early
         time_buffer = dt.timedelta(seconds=self.config.execute_buffer)
-
-        
 
         # read time from ensemble and compare to current_time
         now = state_machine.time_func()

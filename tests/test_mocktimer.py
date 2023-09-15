@@ -3,7 +3,7 @@ import struct
 import time
 from multiprocessing import shared_memory
 
-from TowerScheduler.sleep_timer_tester import SleepTimerTester, main
+from TowerScheduler.sleep_timer_tester import SleepTimerTester
 
 
 def test_sleep():

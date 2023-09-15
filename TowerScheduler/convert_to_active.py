@@ -51,13 +51,11 @@ def convert_one_ensemble(ens: Dict[str, str]) -> List[Dict[str, str]]:
     '''
     this_ens_list = []
     start_time = dt.time.fromisoformat(ens["start_time"])
+    start_time = dt.datetime.combine(dt.date.today(), start_time)
+    interval_sec = dt.timedelta(seconds=ens["interval"])
 
     for j in range(ens["iterations"]):
-        interval_sec = dt.timedelta(seconds=ens["interval"])
-
-        this_iteration_time = ( dt.datetime.combine(dt.date.today(),
-                                                    start_time) + \
-                                interval_sec * j ).time()
+        this_iteration_time = (start_time + interval_sec * j).time()
 
         curr_obj = { "title": ens["title"],
                 "function": ens["function"],
